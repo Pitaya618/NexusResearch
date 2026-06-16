@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusResearch — Prototype Overview</title>
+<style>
+  :root {
+    --bg:      oklch(99% 0.002 240);
+    --surface: oklch(100% 0 0);
+    --fg:      oklch(18% 0.012 250);
+    --muted:   oklch(54% 0.012 250);
+    --border:  oklch(92% 0.005 250);
+    --accent:  oklch(58% 0.18 255);
+    --accent-hover: oklch(52% 0.20 255);
+    --success: oklch(65% 0.18 142);
+    --warning: oklch(75% 0.15 85);
+    --danger:  oklch(55% 0.22 20);
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    --font-body:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 64px 40px; }
+  .header { margin-bottom: 56px; }
+  .logo {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 18px; font-weight: 600;
+  }
+  .subtitle { color: var(--muted); font-size: 15px; margin-top: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    text-decoration: none;
+    color: var(--fg);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .card-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    background: oklch(96% 0.006 250);
+  }
+  .card h3 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .card p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .card .tag {
+    display: inline-flex;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent);
+    background: oklch(96% 0.04 255);
+    border-radius: 4px;
+    padding: 2px 8px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .section-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">N</div>
+      NexusResearch
+    </div>
+    <div class="subtitle">AI 科研助手 · 桌面端原型预览</div>
+  </div>
+
+  <p class="section-label">Product Screens</p>
+  <div class="grid">
+    <a href="welcome.html" class="card">
+      <div class="card-icon">👋</div>
+      <div><span class="tag">Onboarding</span></div>
+      <h3>首次引导</h3>
+      <p>API Key 配置、界面偏好设置、功能概览、加载示例数据 — 模块化引导流程，可跳过可重来。</p>
+    </a>
+    <a href="literature-manager.html" class="card">
+      <div class="card-icon">📚</div>
+      <div><span class="tag">Core Module</span></div>
+      <h3>文献管理</h3>
+      <p>三栏布局：左侧收藏夹与标签筛选、中央卡片/列表视图、右侧详情面板含 AI 摘要与引用格式。</p>
+    </a>
+    <a href="literature-reader.html" class="card">
+      <div class="card-icon">📖</div>
+      <div><span class="tag">Core Module</span></div>
+      <h3>文献阅读</h3>
+      <p>PDF 全文阅读 + 标注（高亮/下划线/批注/便签）+ Markdown 笔记 + AI 问答辅助理解。</p>
+    </a>
+    <a href="essay.html" class="card">
+      <div class="card-icon">📝</div>
+      <div><span class="tag">Core Module</span></div>
+      <h3>随笔</h3>
+      <p>三栏布局：Markdown 编辑器 + AI 对话窗口 + 知识图谱。AI 可直接编辑随笔内容。</p>
+    </a>
+    <a href="paper-editor.html" class="card">
+      <div class="card-icon">✏️</div>
+      <div><span class="tag">Core Module</span></div>
+      <h3>论文写作</h3>
+      <p>LaTeX 编辑器（Monaco）+ 实时 PDF 预览 + 文件树 + 模板切换 + AI 润色与绘图。</p>
+    </a>
+    <a href="landing.html" class="card">
+      <div class="card-icon">🌐</div>
+      <div><span class="tag">Marketing</span></div>
+      <h3>Landing Page</h3>
+      <p>产品营销落地页：Hero、功能亮点、使用场景、开源社区、CTA。响应式设计。</p>
+    </a>
+    <a href="settings.html" class="card">
+      <div class="card-icon">⚙️</div>
+      <div><span class="tag">System</span></div>
+      <h3>设置</h3>
+      <p>API 提供商配置、模型选择与参数调整、代理网络设置、数据存储管理。</p>
+    </a>
+    <a href="skills.html" class="card">
+      <div class="card-icon">🧩</div>
+      <div><span class="tag">System</span></div>
+      <h3>Skill 管理</h3>
+      <p>按模块浏览和安装 AI 技能插件：文献分析、论文问答、学术润色、配图生成等。</p>
+    </a>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusResearch — 设置</title>
+<style>
+  :root {
+    --bg:      oklch(99% 0.002 240);
+    --surface: oklch(100% 0 0);
+    --fg:      oklch(18% 0.012 250);
+    --muted:   oklch(54% 0.012 250);
+    --border:  oklch(92% 0.005 250);
+    --border-strong: oklch(86% 0.006 250);
+    --accent:  oklch(58% 0.18 255);
+    --accent-hover: oklch(52% 0.20 255);
+    --success: oklch(65% 0.18 142);
+    --warning: oklch(75% 0.15 85);
+    --danger:  oklch(55% 0.22 20);
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    --font-body:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    height: 100vh; display: flex; flex-direction: row;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* ── tab bar ── */
+  .tab-bar {
+    height: 36px; display: flex; align-items: stretch;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 8px; gap: 0; flex-shrink: 0;
+    overflow-x: auto; user-select: none;
+  }
+  .tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 12px; height: 100%;
+    font-size: 12px; color: var(--muted);
+    cursor: pointer; text-decoration: none;
+    white-space: nowrap; position: relative;
+    background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    transition: color 0.15s, background 0.15s;
+  }
+  .tab:hover { color: var(--fg); background: oklch(0% 0 0 / 3%); }
+  .tab.active { color: var(--fg); background: transparent; border-bottom-color: var(--accent); }
+  .tab .t-icon { font-size: 13px; flex-shrink: 0; }
+  .tab .t-title { overflow: hidden; text-overflow: ellipsis; max-width: 200px; font-weight: 500; }
+  .tab .t-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 3px;
+    font-size: 14px; line-height: 1; color: var(--muted);
+    opacity: 0; cursor: pointer; border: none; background: transparent;
+    transition: opacity 0.12s, background 0.12s, color 0.12s;
+    flex-shrink: 0; margin-left: 2px;
+  }
+  .tab:hover .t-close { opacity: 0.5; }
+  .tab .t-close:hover { opacity: 1 !important; background: var(--danger); color: #fff; }
+  /* ── sidebar ── */
+  .sidebar {
+    width: 52px; background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 0;
+    flex-shrink: 0; height: 100vh; overflow: hidden;
+  }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 6px; padding: 0 8px; }
+  .sidebar-item {
+    width: 36px; height: 36px; border-radius: 8px;
+    border: none; background: transparent; color: var(--muted);
+    cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.1s, background 0.1s;
+    text-decoration: none; position: relative; flex-shrink: 0;
+  }
+  .sidebar-item:hover { background: oklch(96% 0.004 250); }
+  .sidebar-item.active { color: var(--accent); background: oklch(96% 0.04 255); }
+  .sidebar-item[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+    margin-left: 8px; padding: 4px 10px;
+    background: var(--fg); color: var(--surface);
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+    border-radius: 6px; pointer-events: none;
+    opacity: 0; transition: opacity 0.15s; z-index: 100;
+  }
+  .sidebar-item[data-tooltip]:hover::after { opacity: 1; }
+  /* ── right-wrapper ── */
+  .right-wrapper { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; min-width: 0; }
+  .main { flex: 1; display: flex; overflow: hidden; }
+  .content { flex: 1; display: flex; overflow: hidden; }
+  /* ── status bar ── */
+  .status-bar {
+    height: 28px; background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px; font-size: 11px; color: var(--muted);
+    flex-shrink: 0;
+  }
+  .status-bar .status-left, .status-bar .status-right { display: flex; align-items: center; gap: 12px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); display: inline-block; }
+
+  /* ═══════════════════════════════════════════
+     Settings page styles
+     ═══════════════════════════════════════════ */
+  .settings-layout { display: flex; width: 100%; height: 100%; overflow: hidden; }
+
+  /* Left nav */
+  .settings-nav {
+    width: 200px; flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    padding: 16px 0; overflow-y: auto;
+  }
+  .settings-nav-title {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 0 16px; margin-bottom: 8px;
+  }
+  .settings-nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 16px; font-size: 13px; color: var(--muted);
+    cursor: pointer; border: none; background: none; width: 100%;
+    text-align: left; font-family: var(--font-body);
+    transition: color 0.1s, background 0.1s;
+    border-left: 2px solid transparent;
+  }
+  .settings-nav-item:hover { color: var(--fg); background: oklch(96% 0.004 250); }
+  .settings-nav-item.active {
+    color: var(--accent); background: oklch(96% 0.03 255);
+    border-left-color: var(--accent); font-weight: 500;
+  }
+  .settings-nav-item .nav-icon { font-size: 14px; width: 20px; text-align: center; }
+
+  /* Right content area */
+  .settings-content { flex: 1; overflow-y: auto; padding: 24px 32px; min-width: 0; }
+  .settings-section { display: none; }
+  .settings-section.active { display: block; }
+
+  .section-header { margin-bottom: 20px; }
+  .section-header h2 {
+    font-family: var(--font-display); font-size: 20px; font-weight: 600;
+    letter-spacing: -0.01em; margin-bottom: 4px;
+  }
+  .section-header p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  /* Cards */
+  .settings-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; margin-bottom: 16px;
+  }
+  .settings-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .settings-card-title { font-size: 14px; font-weight: 600; }
+  .settings-card-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* Provider row */
+  .provider-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--border); margin-bottom: 8px;
+    transition: border-color 0.15s;
+  }
+  .provider-row:hover { border-color: var(--border-strong); }
+  .provider-row.selected { border-color: var(--accent); background: oklch(97% 0.01 255); }
+  .provider-icon { font-size: 20px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .provider-info { flex: 1; min-width: 0; }
+  .provider-name { font-size: 13px; font-weight: 600; }
+  .provider-desc { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .provider-status { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px; flex-shrink: 0; }
+  .provider-status.active { background: oklch(94% 0.06 142); color: oklch(40% 0.12 142); }
+  .provider-status.inactive { background: oklch(94% 0.004 250); color: var(--muted); }
+  .provider-status.error { background: oklch(94% 0.06 20); color: oklch(45% 0.15 20); }
+  .provider-radio {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: border-color 0.15s;
+  }
+  .provider-row.selected .provider-radio { border-color: var(--accent); }
+  .provider-row.selected .provider-radio::after {
+    content: ''; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* Provider detail panel */
+  .provider-detail { margin-top: 16px; padding: 16px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); }
+  .provider-detail-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .provider-detail-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .provider-detail-row:last-child { margin-bottom: 0; }
+  .provider-detail-label { font-size: 12px; color: var(--muted); width: 80px; flex-shrink: 0; }
+
+  /* API Key input */
+  .api-key-row {
+    display: flex; align-items: center; gap: 8px; margin-top: 12px;
+  }
+  .api-key-input {
+    flex: 1; font-family: var(--font-mono); font-size: 12px;
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface); color: var(--fg);
+    outline: none; transition: border-color 0.15s;
+  }
+  .api-key-input:focus { border-color: var(--accent); }
+  .api-key-input::placeholder { color: var(--muted); }
+
+  /* Buttons */
+  .btn-sm {
+    padding: 6px 14px; font-size: 12px; font-weight: 500;
+    border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--fg);
+    cursor: pointer; font-family: var(--font-body);
+    transition: background 0.1s, border-color 0.1s;
+    white-space: nowrap;
+  }
+  .btn-sm:hover { background: oklch(96% 0.004 250); border-color: var(--border-strong); }
+  .btn-sm.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-sm.primary:hover { background: var(--accent-hover); }
+  .btn-sm.danger { color: var(--danger); }
+  .btn-sm.danger:hover { background: oklch(94% 0.04 20); border-color: var(--danger); }
+  .btn-sm.ghost { border-color: transparent; background: transparent; }
+  .btn-sm.ghost:hover { background: oklch(96% 0.004 250); border-color: var(--border); }
+
+  /* Add provider form */
+  .add-provider-form {
+    display: none; padding: 16px; border: 1px dashed var(--border-strong);
+    border-radius: 8px; margin-bottom: 8px; background: var(--bg);
+  }
+  .add-provider-form.visible { display: block; }
+  .add-provider-form .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .add-provider-form .form-row:last-child { margin-bottom: 0; }
+  .add-provider-form input, .add-provider-form select {
+    flex: 1; font-size: 12px; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--surface); color: var(--fg);
+    font-family: var(--font-body); outline: none;
+  }
+  .add-provider-form input:focus, .add-provider-form select:focus { border-color: var(--accent); }
+
+  /* Fetch loading */
+  .fetch-loading {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--accent); margin-left: 8px;
+  }
+  .fetch-loading::before {
+    content: ''; width: 12px; height: 12px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Table */
+  .settings-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .settings-table th {
+    text-align: left; font-weight: 600; font-size: 11px;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em;
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+  }
+  .settings-table td {
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .settings-table tr:last-child td { border-bottom: none; }
+  .settings-table tr:hover td { background: oklch(97% 0.002 250); }
+
+  /* Toggle switch */
+  .toggle {
+    width: 36px; height: 20px; border-radius: 10px;
+    background: var(--border-strong); cursor: pointer;
+    position: relative; transition: background 0.2s; border: none; padding: 0;
+  }
+  .toggle::after {
+    content: ''; position: absolute; left: 2px; top: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; transition: transform 0.2s;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* Select */
+  .sel {
+    font-size: 12px; padding: 6px 10px; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--surface); color: var(--fg);
+    font-family: var(--font-body); cursor: pointer;
+  }
+
+  /* Divider */
+  .section-divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  /* Connection test result */
+  .test-result {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 500; margin-left: 8px;
+  }
+  .test-result.ok { color: var(--success); }
+  .test-result.fail { color: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- ── sidebar ── -->
+<div class="sidebar" id="global-sidebar">
+  <div class="sidebar-nav">
+    <a href="literature-manager.html" class="sidebar-item" data-tooltip="文献管理">📚</a>
+    <a href="literature-reader.html" class="sidebar-item" data-tooltip="文献阅读">📖</a>
+    <a href="essay.html" class="sidebar-item" data-tooltip="随笔">📝</a>
+    <a href="paper-editor.html" class="sidebar-item" data-tooltip="论文写作">✏️</a>
+  </div>
+  <div style="flex:1"></div>
+  <div class="sidebar-nav">
+    <a href="skills.html" class="sidebar-item" data-tooltip="Skills">🧩</a>
+    <a href="settings.html" class="sidebar-item active" data-tooltip="设置">⚙️</a>
+  </div>
+</div>
+
+<!-- ── right wrapper ── -->
+<div class="right-wrapper">
+  <!-- tab bar -->
+  <div class="tab-bar" id="tabBar">
+    <a class="tab active" href="settings.html">
+      <span class="t-icon">⚙️</span>
+      <span class="t-title">设置</span>
+    </a>
+    <a class="tab" href="literature-manager.html">
+      <span class="t-icon">📚</span>
+      <span class="t-title">文献管理</span>
+      <button class="t-close" title="关闭">×</button>
+    </a>
+    <a class="tab" href="literature-reader.html">
+      <span class="t-icon">📖</span>
+      <span class="t-title">Attention Is All You Need</span>
+      <button class="t-close" title="关闭">×</button>
+    </a>
+    <a class="tab" href="essay.html">
+      <span class="t-icon">📝</span>
+      <span class="t-title">LLM在药物发现中的应用</span>
+      <button class="t-close" title="关闭">×</button>
+    </a>
+    <a class="tab" href="paper-editor.html">
+      <span class="t-icon">✏️</span>
+      <span class="t-title">Transformer分子生成</span>
+      <button class="t-close" title="关闭">×</button>
+    </a>
+  </div>
+
+  <!-- main -->
+  <div class="main">
+    <div class="content">
+      <div class="settings-layout">
+        <!-- Left nav -->
+        <div class="settings-nav">
+          <div class="settings-nav-title">通用</div>
+          <button class="settings-nav-item active" data-section="models-api">
+            <span class="nav-icon">🤖</span> 模型与 API
+          </button>
+          <div style="height:16px"></div>
+          <div class="settings-nav-title">高级</div>
+          <button class="settings-nav-item" data-section="proxy">
+            <span class="nav-icon">🌐</span> 代理与网络
+          </button>
+          <button class="settings-nav-item" data-section="data">
+            <span class="nav-icon">💾</span> 数据与存储
+          </button>
+          <button class="settings-nav-item" data-section="about">
+            <span class="nav-icon">ℹ️</span> 关于
+          </button>
+        </div>
+
+        <!-- Right content -->
+        <div class="settings-content">
+
+          <!-- ═══ Models & API (unified) ═══ -->
+          <div class="settings-section active" id="sec-models-api">
+            <div class="section-header">
+              <h2>模型与 API</h2>
+              <p>管理 API 提供商和模型。选择提供商后可自动获取可用模型列表。</p>
+            </div>
+
+            <!-- Provider list -->
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <div>
+                  <div class="settings-card-title">API 提供商</div>
+                  <div class="settings-card-desc">选择一个作为默认提供商。支持自定义添加兼容 OpenAI 接口的服务商。</div>
+                </div>
+                <button class="btn-sm primary" onclick="toggleAddProvider()">+ 添加提供商</button>
+              </div>
+
+              <!-- Add custom provider form -->
+              <div class="add-provider-form" id="addProviderForm">
+                <div class="form-row">
+                  <input type="text" id="newProviderName" placeholder="提供商名称（如 My LLM API）">
+                  <input type="text" id="newProviderBase" placeholder="Base URL（如 https://api.example.com/v1）">
+                </div>
+                <div class="form-row">
+                  <input type="text" id="newProviderKey" placeholder="API Key">
+                  <select id="newProviderCompat">
+                    <option value="openai">OpenAI 兼容接口</option>
+                    <option value="anthropic">Anthropic 兼容接口</option>
+                    <option value="custom">自定义接口</option>
+                  </select>
+                  <button class="btn-sm primary" onclick="addCustomProvider()">添加</button>
+                  <button class="btn-sm" onclick="toggleAddProvider()">取消</button>
+                </div>
+              </div>
+
+              <div id="providerList">
+                <div class="provider-row selected" data-provider="anthropic" onclick="selectProvider(this)">
+                  <div class="provider-radio"></div>
+                  <div class="provider-icon">🟣</div>
+                  <div class="provider-info">
+                    <div class="provider-name">Anthropic</div>
+                    <div class="provider-desc">Claude 系列 — 长上下文、强推理</div>
+                  </div>
+                  <div class="provider-status active">已连接</div>
+                </div>
+
+                <div class="provider-row" data-provider="openai" onclick="selectProvider(this)">
+                  <div class="provider-radio"></div>
+                  <div class="provider-icon">🟢</div>
+                  <div class="provider-info">
+                    <div class="provider-name">OpenAI</div>
+                    <div class="provider-desc">GPT-4o / o1 / o3 系列</div>
+                  </div>
+                  <div class="provider-status active">已连接</div>
+                </div>
+
+                <div class="provider-row" data-provider="google" onclick="selectProvider(this)">
+                  <div class="provider-radio"></div>
+                  <div class="provider-icon">🔵</div>
+                  <div class="provider-info">
+                    <div class="provider-name">Google AI</div>
+                    <div class="provider-desc">Gemini 2.5 Pro / Flash</div>
+                  </div>
+                  <div class="provider-status inactive">未配置</div>
+                </div>
+
+                <div class="provider-row" data-provider="deepseek" onclick="selectProvider(this)">
+                  <div class="provider-radio"></div>
+                  <div class="provider-icon">🟡</div>
+                  <div class="provider-info">
+                    <div class="provider-name">DeepSeek</div>
+                    <div class="provider-desc">DeepSeek-V3 / R1 — 高性价比推理</div>
+                  </div>
+                  <div class="provider-status active">已连接</div>
+                </div>
+
+                <div class="provider-row" data-provider="moonshot" onclick="selectProvider(this)">
+                  <div class="provider-radio"></div>
+                  <div class="provider-icon">🔴</div>
+                  <div class="provider-info">
+                    <div class="provider-name">Moonshot (Kimi)</div>
+                    <div class="provider-desc">moonshot-v1-128k — 超长上下文</div>
+                  </div>
+                  <div class="provider-status inactive">未配置</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- API Key for selected provider -->
+            <div class="settings-card" id="apiKeySection">
+              <div class="settings-card-header">
+                <div>
+                  <div class="settings-card-title">API Key</div>
+                  <div class="settings-card-desc" id="apiKeyProviderLabel">Anthropic — 当前默认</div>
+                </div>
+              </div>
+              <div class="api-key-row">
+                <input class="api-key-input" type="password" value="sk-ant-api03-••••••••••••••••" placeholder="sk-...">
+                <button class="btn-sm" onclick="this.textContent=this.textContent==='显示'?'隐藏':'显示'">显示</button>
+                <button class="btn-sm" onclick="testConnection(this)">验证</button>
+              </div>
+              <div style="margin-top:12px; display:flex; gap:8px;">
+                <button class="btn-sm primary">+ 添加 API Key</button>
+                <button class="btn-sm">导入 .env</button>
+              </div>
+            </div>
+
+            <!-- Module → Model assignment -->
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <div>
+                  <div class="settings-card-title">模块 — 模型分配</div>
+                  <div class="settings-card-desc" id="moduleModelDesc">为不同模块指定使用的模型。选择提供商后点击获取模型列表填充选项。</div>
+                </div>
+                <button class="btn-sm" id="fetchModelsBtn" onclick="fetchModels()">
+                  <span id="fetchBtnText">获取模型列表</span>
+                </button>
+              </div>
+              <table class="settings-table">
+                <thead>
+                  <tr><th>模块</th><th>当前模型</th><th>用途</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="font-weight:600;">📚 文献管理</td>
+                    <td><select class="sel model-select" id="model-select-lit" data-module="lit"></select></td>
+                    <td style="color:var(--muted);">文献摘要生成、标签分类</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600;">📖 文献阅读</td>
+                    <td><select class="sel model-select" id="model-select-reader" data-module="reader"></select></td>
+                    <td style="color:var(--muted);">深度问答、概念解释</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600;">📝 随笔</td>
+                    <td><select class="sel model-select" id="model-select-essay" data-module="essay"></select></td>
+                    <td style="color:var(--muted);">内容续写、润色、改写</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:600;">✏️ 论文写作</td>
+                    <td><select class="sel model-select" id="model-select-paper" data-module="paper"></select></td>
+                    <td style="color:var(--muted);">学术润色、LaTeX 生成、绘图</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ═══ Proxy ═══ -->
+          <div class="settings-section" id="sec-proxy">
+            <div class="section-header">
+              <h2>代理与网络</h2>
+              <p>配置网络代理和连接设置。</p>
+            </div>
+            <div class="settings-card">
+              <div class="settings-card-title" style="margin-bottom:16px;">代理设置</div>
+              <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                <span style="font-size:13px;">启用代理</span>
+                <button class="toggle" onclick="this.classList.toggle('on')"></button>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                  <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">代理类型</label>
+                  <select class="sel" style="width:100%;">
+                    <option>HTTP</option>
+                    <option>SOCKS5</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">主机</label>
+                  <input class="api-key-input" type="text" placeholder="127.0.0.1" style="width:100%;">
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">端口</label>
+                  <input class="api-key-input" type="number" placeholder="7890" style="width:100%;">
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">认证</label>
+                  <input class="api-key-input" type="text" placeholder="用户名:密码 (可选)" style="width:100%;">
+                </div>
+              </div>
+              <div style="margin-top:16px; display:flex; gap:8px;">
+                <button class="btn-sm">测试连接</button>
+                <button class="btn-sm primary">保存</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ Data & Storage ═══ -->
+          <div class="settings-section" id="sec-data">
+            <div class="section-header">
+              <h2>数据与存储</h2>
+              <p>管理本地数据、存储路径和数据迁移。</p>
+            </div>
+
+            <!-- 存储使用 -->
+            <div class="settings-card">
+              <div class="settings-card-title" style="margin-bottom:16px;">存储使用</div>
+              <div style="display:flex; gap:24px; margin-bottom:16px;">
+                <div>
+                  <div style="font-size:24px; font-weight:700; font-family:var(--font-mono);">2.4 GB</div>
+                  <div style="font-size:11px; color:var(--muted);">已用空间</div>
+                </div>
+                <div>
+                  <div style="font-size:24px; font-weight:700; font-family:var(--font-mono); color:var(--muted);">∞</div>
+                  <div style="font-size:11px; color:var(--muted);">可用空间</div>
+                </div>
+              </div>
+              <div style="height:6px; border-radius:3px; background:var(--border); overflow:hidden; margin-bottom:16px;">
+                <div style="width:24%; height:100%; background:var(--accent); border-radius:3px;"></div>
+              </div>
+              <div style="font-size:12px; color:var(--muted); line-height:1.8;">
+                文献数据库：1.2 GB · 随笔笔记：0.4 GB · 论文草稿：0.6 GB · 缓存：0.2 GB
+              </div>
+            </div>
+
+            <!-- 数据存储路径 -->
+            <div class="settings-card">
+              <div class="settings-card-title" style="margin-bottom:16px;">数据存储路径</div>
+              <div style="font-size:13px; color:var(--muted); margin-bottom:12px;">所有文献、随笔、论文草稿和配置文件均存储在以下路径。修改路径后数据将自动迁移到新位置。</div>
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:12px;">
+                <span style="font-family:var(--font-mono); font-size:13px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" id="data-path">C:\Users\Mingwei Chen\Documents\NexusResearch</span>
+                <button class="btn-sm" onclick="document.getElementById('data-path').textContent='C:\\Users\\Mingwei Chen\\Desktop\\NexusResearch'" style="flex-shrink:0;">修改路径</button>
+                <button class="btn-sm" style="flex-shrink:0;">打开文件夹</button>
+              </div>
+              <div style="font-size:11px; color:var(--muted); line-height:1.6;">
+                <div>· 文献库：<span style="font-family:var(--font-mono);">literature/</span>（1.2 GB · 342 篇文献）</div>
+                <div>· 随笔：<span style="font-family:var(--font-mono);">essays/</span>（0.4 GB · 28 篇随笔）</div>
+                <div>· 论文：<span style="font-family:var(--font-mono);">papers/</span>（0.6 GB · 5 篇论文）</div>
+                <div>· 配置：<span style="font-family:var(--font-mono);">config/</span>（含 API Key、偏好设置）</div>
+              </div>
+            </div>
+
+            <!-- 数据迁移 -->
+            <div class="settings-card">
+              <div class="settings-card-title" style="margin-bottom:16px;">数据迁移</div>
+              <div style="font-size:13px; color:var(--muted); margin-bottom:16px;">将数据导出为可移植包，或从其他设备导入数据。</div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                <!-- 导出 -->
+                <div style="padding:16px; border:1px solid var(--border); border-radius:var(--radius-md);">
+                  <div style="font-size:13px; font-weight:600; margin-bottom:6px;">📦 导出数据</div>
+                  <div style="font-size:12px; color:var(--muted); margin-bottom:12px; line-height:1.6;">将所有文献、随笔、论文和设置打包为 <span style="font-family:var(--font-mono);">.nrx</span> 文件，可用于备份或迁移到其他设备。</div>
+                  <div style="display:flex; gap:6px; align-items:center; margin-bottom:10px;">
+                    <label style="font-size:12px; color:var(--muted); white-space:nowrap;">导出到</label>
+                    <input type="text" value="D:\Backups\NexusResearch" style="flex:1; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; font-family:var(--font-mono); background:var(--surface); color:var(--fg);">
+                  </div>
+                  <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+                    <label style="font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; cursor:pointer;">
+                      <input type="checkbox" checked> 文献库
+                    </label>
+                    <label style="font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; cursor:pointer;">
+                      <input type="checkbox" checked> 随笔
+                    </label>
+                    <label style="font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; cursor:pointer;">
+                      <input type="checkbox" checked> 论文
+                    </label>
+                    <label style="font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; cursor:pointer;">
+                      <input type="checkbox" checked> 设置
+                    </label>
+                  </div>
+                  <button class="btn-sm" style="width:100%;">开始导出</button>
+                </div>
+
+                <!-- 导入 -->
+                <div style="padding:16px; border:1px solid var(--border); border-radius:var(--radius-md);">
+                  <div style="font-size:13px; font-weight:600; margin-bottom:6px;">📥 导入数据</div>
+                  <div style="font-size:12px; color:var(--muted); margin-bottom:12px; line-height:1.6;">从 <span style="font-family:var(--font-mono);">.nrx</span> 备份包导入数据。导入前可预览内容，重复数据将自动合并。</div>
+                  <div style="display:flex; gap:6px; align-items:center; margin-bottom:10px;">
+                    <label style="font-size:12px; color:var(--muted); white-space:nowrap;">备份文件</label>
+                    <input type="text" placeholder="选择 .nrx 文件…" style="flex:1; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; background:var(--surface); color:var(--muted);">
+                  </div>
+                  <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+                    <label style="font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; cursor:pointer;">
+                      <input type="checkbox" checked> 覆盖现有设置
+                    </label>
+                    <label style="font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; cursor:pointer;">
+                      <input type="checkbox" checked> 合并文献库
+                    </label>
+                  </div>
+                  <button class="btn-sm" style="width:100%;" disabled>选择文件后导入</button>
+                </div>
+              </div>
+
+              <!-- 迁移进度（模拟） -->
+              <div style="display:none; padding:12px 14px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm);">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                  <span style="font-size:12px; font-weight:600;">正在迁移…</span>
+                  <span style="font-size:11px; color:var(--muted);">67%</span>
+                </div>
+                <div style="height:4px; border-radius:2px; background:var(--border); overflow:hidden;">
+                  <div style="width:67%; height:100%; background:var(--accent); border-radius:2px; transition:width 0.3s;"></div>
+                </div>
+                <div style="font-size:11px; color:var(--muted); margin-top:6px;">已迁移 241/342 篇文献…</div>
+              </div>
+            </div>
+
+            <!-- 数据管理 -->
+            <div class="settings-card">
+              <div class="settings-card-title" style="margin-bottom:16px;">数据管理</div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn-sm">清除缓存</button>
+                <button class="btn-sm">重建索引</button>
+                <button class="btn-sm danger">清空所有数据</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ About ═══ -->
+          <div class="settings-section" id="sec-about">
+            <div class="section-header">
+              <h2>关于</h2>
+              <p>NexusResearch 桌面端 AI 科研助手</p>
+            </div>
+            <div class="settings-card">
+              <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+                <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, var(--accent), oklch(65% 0.15 220)); display:flex; align-items:center; justify-content:center; font-size:24px;">🔬</div>
+                <div>
+                  <div style="font-size:18px; font-weight:700;">NexusResearch</div>
+                  <div style="font-size:12px; color:var(--muted);">v1.0.0 · 构建于 2026-06-03</div>
+                </div>
+              </div>
+              <div style="font-size:13px; line-height:1.8; color:var(--muted);">
+                NexusResearch 是一款面向学术研究者的桌面端 AI 科研助手。集成文献管理、PDF 阅读标注、Markdown 随笔、LaTeX 论文写作等核心模块，支持多种大语言模型 API，让科研工作更高效。
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /settings-content -->
+      </div><!-- /settings-layout -->
+    </div><!-- /content -->
+  </div><!-- /main -->
+
+  <!-- status bar -->
+  <div class="status-bar">
+    <div class="status-left">
+      <span><span class="status-dot"></span></span>
+      <span>NexusResearch v1.0.0</span>
+    </div>
+    <div class="status-right">
+      <span>默认模型：Claude Opus 4.8</span>
+      <span>API：Anthropic</span>
+    </div>
+  </div>
+</div><!-- /right-wrapper -->
+
+<script>
+  // ── Settings nav ──
+  document.querySelectorAll('.settings-nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.settings-nav-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+      document.getElementById('sec-' + btn.dataset.section).classList.add('active');
+    });
+  });
+
+  // ── Provider models data ──
+  const PROVIDER_MODELS = {
+    anthropic: [
+      { id: 'claude-opus-4-8', name: 'Claude Opus 4.8', meta: 'Anthropic · 最强推理', tags: ['推荐', '200K ctx'], hot: true },
+      { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', meta: 'Anthropic · 均衡', tags: ['200K ctx'] },
+      { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', meta: 'Anthropic · 快速轻量', tags: ['200K ctx'] },
+    ],
+    openai: [
+      { id: 'gpt-4o', name: 'GPT-4o', meta: 'OpenAI · 多模态', tags: ['推荐', '128K ctx'], hot: true },
+      { id: 'o3', name: 'o3', meta: 'OpenAI · 强推理', tags: ['128K ctx'] },
+      { id: 'o1', name: 'o1', meta: 'OpenAI · 推理', tags: ['128K ctx'] },
+      { id: 'gpt-4o-mini', name: 'GPT-4o mini', meta: 'OpenAI · 轻量', tags: ['128K ctx'] },
+    ],
+    google: [
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', meta: 'Google · 超长上下文', tags: ['推荐', '1M ctx'], hot: true },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', meta: 'Google · 快速', tags: ['1M ctx'] },
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', meta: 'Google · 轻量', tags: ['1M ctx'] },
+    ],
+    deepseek: [
+      { id: 'deepseek-v3', name: 'DeepSeek-V3', meta: 'DeepSeek · 高性价比', tags: ['推荐', '128K ctx'], hot: true },
+      { id: 'deepseek-r1', name: 'DeepSeek-R1', meta: 'DeepSeek · 推理', tags: ['128K ctx'] },
+    ],
+    moonshot: [
+      { id: 'moonshot-v1-128k', name: 'Moonshot v1 128K', meta: 'Moonshot · 长文本', tags: ['推荐', '128K ctx'], hot: true },
+      { id: 'moonshot-v1-32k', name: 'Moonshot v1 32K', meta: 'Moonshot · 标准', tags: ['32K ctx'] },
+    ],
+  };
+
+  // ── Provider selection ──
+  function selectProvider(row) {
+    document.querySelectorAll('.provider-row').forEach(r => r.classList.remove('selected'));
+    row.classList.add('selected');
+    const provider = row.dataset.provider;
+    renderModelDropdowns(provider);
+    document.getElementById('apiKeyProviderLabel').textContent = row.querySelector('.provider-name').textContent + ' — 当前默认';
+  }
+
+  // ── Populate model dropdowns ──
+  function renderModelDropdowns(provider) {
+    const models = PROVIDER_MODELS[provider] || [];
+    const selects = document.querySelectorAll('.model-select');
+    selects.forEach(sel => {
+      const prev = sel.value;
+      sel.innerHTML = models.length > 0
+        ? models.map((m, i) => `<option value="${m.id}"${i === 0 ? ' selected' : ''}>${m.name}</option>`).join('')
+        : '<option value="">暂无模型 — 点击获取模型列表</option>';
+      // Try to restore previous selection
+      if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+    });
+  }
+
+  // ── Fetch models (simulated API call) ──
+  function fetchModels() {
+    const btn = document.getElementById('fetchModelsBtn');
+    const text = document.getElementById('fetchBtnText');
+    const row = document.querySelector('.provider-row.selected');
+    const provider = row ? row.dataset.provider : 'anthropic';
+    const providerName = row ? row.querySelector('.provider-name').textContent : 'Anthropic';
+
+    text.innerHTML = '<span class="fetch-loading">获取中…</span>';
+    btn.disabled = true;
+
+    setTimeout(() => {
+      const models = PROVIDER_MODELS[provider];
+      if (models && models.length > 0) {
+        renderModelDropdowns(provider);
+        text.textContent = '获取模型列表';
+        btn.disabled = false;
+        document.getElementById('moduleModelDesc').textContent = `已获取 ${providerName} 的 ${models.length} 个模型，可为各模块选择。`;
+      } else {
+        text.textContent = '获取模型列表';
+        btn.disabled = false;
+        document.getElementById('moduleModelDesc').textContent = `未找到 ${providerName} 的模型。请检查 API Key 是否有效。`;
+      }
+    }, 1200);
+  }
+
+  // ── Add custom provider ──
+  function toggleAddProvider() {
+    document.getElementById('addProviderForm').classList.toggle('visible');
+  }
+
+  function addCustomProvider() {
+    const name = document.getElementById('newProviderName').value.trim();
+    const base = document.getElementById('newProviderBase').value.trim();
+    const key = document.getElementById('newProviderKey').value.trim();
+    if (!name || !base) return;
+
+    const id = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const icon = '⚙️';
+
+    // Add to provider list
+    const list = document.getElementById('providerList');
+    const row = document.createElement('div');
+    row.className = 'provider-row';
+    row.dataset.provider = id;
+    row.onclick = function() { selectProvider(this); };
+    row.innerHTML = `
+      <div class="provider-radio"></div>
+      <div class="provider-icon">${icon}</div>
+      <div class="provider-info">
+        <div class="provider-name">${name}</div>
+        <div class="provider-desc">${base}</div>
+      </div>
+      <div class="provider-status active">已添加</div>
+    `;
+    list.appendChild(row);
+
+    // Register empty models
+    PROVIDER_MODELS[id] = [];
+
+    // Clear form
+    document.getElementById('newProviderName').value = '';
+    document.getElementById('newProviderBase').value = '';
+    document.getElementById('newProviderKey').value = '';
+    toggleAddProvider();
+
+    // Select the new provider
+    selectProvider(row);
+  }
+
+  // ── Connection test ──
+  function testConnection(btn) {
+    const orig = btn.textContent;
+    btn.textContent = '测试中…';
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.textContent = '✓ 通过';
+      btn.style.color = 'var(--success)';
+      btn.style.borderColor = 'var(--success)';
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.disabled = false;
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }, 1500);
+    }, 800);
+  }
+
+  // ── Close tab ──
+  document.querySelectorAll('.t-close').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      const tab = btn.closest('.tab');
+      if (tab.classList.contains('active')) {
+        window.location.href = 'index.html';
+      } else {
+        tab.remove();
+      }
+    });
+  });
+
+  // ── Init: populate dropdowns with default provider ──
+  renderModelDropdowns('anthropic');
+</script>
+</body>
+</html>

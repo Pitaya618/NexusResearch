@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusResearch — Skill 管理</title>
+<style>
+  :root {
+    --bg:      oklch(99% 0.002 240);
+    --surface: oklch(100% 0 0);
+    --fg:      oklch(18% 0.012 250);
+    --muted:   oklch(54% 0.012 250);
+    --border:  oklch(92% 0.005 250);
+    --border-strong: oklch(86% 0.006 250);
+    --accent:  oklch(58% 0.18 255);
+    --accent-hover: oklch(52% 0.20 255);
+    --success: oklch(65% 0.18 142);
+    --warning: oklch(75% 0.15 85);
+    --danger:  oklch(55% 0.22 20);
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    --font-body:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    height: 100vh; display: flex; flex-direction: row;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* ── tab bar ── */
+  .tab-bar {
+    height: 36px; display: flex; align-items: stretch;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 8px; gap: 0; flex-shrink: 0;
+    overflow-x: auto; user-select: none;
+  }
+  .tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 12px; height: 100%;
+    font-size: 12px; color: var(--muted);
+    cursor: pointer; text-decoration: none;
+    white-space: nowrap; position: relative;
+    background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    transition: color 0.15s, background 0.15s;
+  }
+  .tab:hover { color: var(--fg); background: oklch(0% 0 0 / 3%); }
+  .tab.active { color: var(--fg); background: transparent; border-bottom-color: var(--accent); }
+  .tab .t-icon { font-size: 13px; flex-shrink: 0; }
+  .tab .t-title { overflow: hidden; text-overflow: ellipsis; max-width: 200px; font-weight: 500; }
+  .tab .t-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 3px;
+    font-size: 14px; line-height: 1; color: var(--muted);
+    opacity: 0; cursor: pointer; border: none; background: transparent;
+    transition: opacity 0.12s, background 0.12s, color 0.12s;
+    flex-shrink: 0; margin-left: 2px;
+  }
+  .tab:hover .t-close { opacity: 0.5; }
+  .tab .t-close:hover { opacity: 1 !important; background: var(--danger); color: #fff; }
+  /* ── sidebar ── */
+  .sidebar {
+    width: 52px; background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 0;
+    flex-shrink: 0; height: 100vh; overflow: hidden;
+  }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 6px; padding: 0 8px; }
+  .sidebar-item {
+    width: 36px; height: 36px; border-radius: 8px;
+    border: none; background: transparent; color: var(--muted);
+    cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.1s, background 0.1s;
+    text-decoration: none; position: relative; flex-shrink: 0;
+  }
+  .sidebar-item:hover { background: oklch(96% 0.004 250); }
+  .sidebar-item.active { color: var(--accent); background: oklch(96% 0.04 255); }
+  .sidebar-item[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+    margin-left: 8px; padding: 4px 10px;
+    background: var(--fg); color: var(--surface);
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+    border-radius: 6px; pointer-events: none;
+    opacity: 0; transition: opacity 0.15s; z-index: 100;
+  }
+  .sidebar-item[data-tooltip]:hover::after { opacity: 1; }
+  /* ── right-wrapper ── */
+  .right-wrapper { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; min-width: 0; }
+  .main { flex: 1; display: flex; overflow: hidden; }
+  .content { flex: 1; display: flex; overflow: hidden; }
+  /* ── status bar ── */
+  .status-bar {
+    height: 28px; background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px; font-size: 11px; color: var(--muted);
+    flex-shrink: 0;
+  }
+  .status-bar .status-left, .status-bar .status-right { display: flex; align-items: center; gap: 12px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); display: inline-block; }
+
+  /* ═══════════════════════════════════════════
+     Skill Management page styles
+     ═══════════════════════════════════════════ */
+  .skills-layout { display: flex; width: 100%; height: 100%; overflow: hidden; }
+
+  /* Left module filter */
+  .skills-nav {
+    width: 200px; flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    padding: 16px 0; overflow-y: auto;
+  }
+  .skills-nav-title {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 0 16px; margin-bottom: 8px;
+  }
+  .skills-nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 16px; font-size: 13px; color: var(--muted);
+    cursor: pointer; border: none; background: none; width: 100%;
+    text-align: left; font-family: var(--font-body);
+    transition: color 0.1s, background 0.1s;
+    border-left: 2px solid transparent;
+  }
+  .skills-nav-item:hover { color: var(--fg); background: oklch(96% 0.004 250); }
+  .skills-nav-item.active {
+    color: var(--accent); background: oklch(96% 0.03 255);
+    border-left-color: var(--accent); font-weight: 500;
+  }
+  .skills-nav-item .nav-icon { font-size: 14px; width: 20px; text-align: center; }
+  .skills-nav-badge {
+    margin-left: auto; font-size: 10px; font-weight: 600;
+    background: oklch(94% 0.04 255); color: var(--accent);
+    padding: 1px 6px; border-radius: 8px;
+  }
+
+  /* Right content */
+  .skills-content { flex: 1; overflow-y: auto; padding: 24px 32px; min-width: 0; }
+  .skills-section { display: none; }
+  .skills-section.active { display: block; }
+
+  .section-header { margin-bottom: 20px; }
+  .section-header h2 {
+    font-family: var(--font-display); font-size: 20px; font-weight: 600;
+    letter-spacing: -0.01em; margin-bottom: 4px;
+  }
+  .section-header p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  /* Search bar */
+  .search-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border: 1px solid var(--border);
+    border-radius: 8px; background: var(--surface);
+    margin-bottom: 16px; transition: border-color 0.15s;
+  }
+  .search-bar:focus-within { border-color: var(--accent); }
+  .search-bar input {
+    flex: 1; border: none; outline: none; font-size: 13px;
+    font-family: var(--font-body); background: transparent; color: var(--fg);
+  }
+  .search-bar input::placeholder { color: var(--muted); }
+  .search-icon { color: var(--muted); font-size: 14px; }
+
+  /* Filter chips */
+  .filter-row { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-chip {
+    padding: 4px 12px; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); border-radius: 16px;
+    background: var(--surface); color: var(--muted);
+    cursor: pointer; transition: all 0.1s; font-family: var(--font-body);
+  }
+  .filter-chip:hover { border-color: var(--border-strong); color: var(--fg); }
+  .filter-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* Skill card */
+  .skill-card {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px; border: 1px solid var(--border);
+    border-radius: 10px; background: var(--surface);
+    margin-bottom: 10px; transition: border-color 0.15s;
+  }
+  .skill-card:hover { border-color: var(--border-strong); }
+  .skill-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .skill-info { flex: 1; min-width: 0; }
+  .skill-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .skill-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 6px; }
+  .skill-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .skill-tag {
+    font-size: 10px; padding: 1px 6px; border-radius: 4px;
+    background: oklch(96% 0.004 250); color: var(--muted);
+  }
+  .skill-tag.module { background: oklch(94% 0.03 255); color: var(--accent); }
+  .skill-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; align-items: flex-end; }
+
+  /* Buttons */
+  .btn-sm {
+    padding: 6px 14px; font-size: 12px; font-weight: 500;
+    border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--fg);
+    cursor: pointer; font-family: var(--font-body);
+    transition: background 0.1s, border-color 0.1s;
+    white-space: nowrap;
+  }
+  .btn-sm:hover { background: oklch(96% 0.004 250); border-color: var(--border-strong); }
+  .btn-sm.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-sm.primary:hover { background: var(--accent-hover); }
+  .btn-sm.danger { color: var(--danger); }
+  .btn-sm.danger:hover { background: oklch(94% 0.04 20); border-color: var(--danger); }
+  .btn-sm.success { background: oklch(94% 0.06 142); color: oklch(40% 0.12 142); border-color: oklch(80% 0.06 142); }
+
+  /* Status badge */
+  .skill-status {
+    font-size: 11px; font-weight: 500; padding: 2px 8px;
+    border-radius: 10px; white-space: nowrap;
+  }
+  .skill-status.installed { background: oklch(94% 0.06 142); color: oklch(40% 0.12 142); }
+  .skill-status.available { background: oklch(94% 0.004 250); color: var(--muted); }
+  .skill-status.updating { background: oklch(94% 0.08 85); color: oklch(45% 0.12 85); }
+
+  /* Config panel */
+  .config-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; margin-bottom: 16px;
+  }
+  .config-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .config-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+  }
+  .config-row:last-child { border-bottom: none; }
+  .config-label { font-size: 12px; font-weight: 500; min-width: 120px; }
+  .config-value { flex: 1; font-size: 12px; color: var(--muted); }
+
+  .config-input {
+    font-size: 12px; padding: 6px 10px; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--bg); color: var(--fg);
+    font-family: var(--font-body); outline: none; width: 100%;
+  }
+  .config-input:focus { border-color: var(--accent); }
+
+  /* Toggle switch */
+  .toggle {
+    width: 36px; height: 20px; border-radius: 10px;
+    background: var(--border-strong); cursor: pointer;
+    position: relative; transition: background 0.2s; border: none; padding: 0;
+    flex-shrink: 0;
+  }
+  .toggle::after {
+    content: ''; position: absolute; left: 2px; top: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; transition: transform 0.2s;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* Installed skill detail */
+  .installed-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .installed-header h3 { font-size: 16px; font-weight: 600; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center; padding: 48px 24px; color: var(--muted);
+  }
+  .empty-state .icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-state p { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- ── sidebar ── -->
+<div class="sidebar" id="global-sidebar">
+  <div class="sidebar-nav">
+    <a href="literature-manager.html" class="sidebar-item" data-tooltip="文献管理">📚</a>
+    <a href="literature-reader.html" class="sidebar-item" data-tooltip="文献阅读">📖</a>
+    <a href="essay.html" class="sidebar-item" data-tooltip="随笔">📝</a>
+    <a href="paper-editor.html" class="sidebar-item" data-tooltip="论文写作">✏️</a>
+  </div>
+  <div style="flex:1"></div>
+  <div class="sidebar-nav">
+    <a href="skills.html" class="sidebar-item active" data-tooltip="Skills">🧩</a>
+    <a href="settings.html" class="sidebar-item" data-tooltip="设置">⚙️</a>
+  </div>
+</div>
+
+<!-- ── right wrapper ── -->
+<div class="right-wrapper">
+  <!-- tab bar -->
+  <div class="tab-bar" id="tabBar">
+    <a class="tab active" href="skills.html">
+      <span class="t-icon">🧩</span>
+      <span class="t-title">Skill 管理</span>
+    </a>
+    <a class="tab" href="literature-manager.html">
+      <span class="t-icon">📚</span>
+      <span class="t-title">文献管理</span>
+      <button class="t-close" title="关闭">×</button>
+    </a>
+    <a class="tab" href="literature-reader.html">
+      <span class="t-icon">📖</span>
+      <span class="t-title">Attention Is All You Need</span>
+      <button class="t-close" title="关闭">×</button>
+    </a>
+    <a class="tab" href="essay.html">
+      <span class="t-icon">📝</span>
+      <span class="t-title">LLM在药物发现中的应用</span>
+      <button class="t-close" title="关闭">×</button>
+    </a>
+    <a class="tab" href="paper-editor.html">
+      <span class="t-icon">✏️</span>
+      <span class="t-title">Transformer分子生成</span>
+      <button class="t-close" title="关闭">×</button>
+    </a>
+  </div>
+
+  <!-- main -->
+  <div class="main">
+    <div class="content">
+      <div class="skills-layout">
+        <!-- Left nav — module filter -->
+        <div class="skills-nav">
+          <div class="skills-nav-title">按模块</div>
+          <button class="skills-nav-item active" data-section="all">
+            <span class="nav-icon">🧩</span> 全部 Skills
+            <span class="skills-nav-badge">12</span>
+          </button>
+          <button class="skills-nav-item" data-section="literature">
+            <span class="nav-icon">📚</span> 文献管理
+            <span class="skills-nav-badge">4</span>
+          </button>
+          <button class="skills-nav-item" data-section="reader">
+            <span class="nav-icon">📖</span> 文献阅读
+            <span class="skills-nav-badge">3</span>
+          </button>
+          <button class="skills-nav-item" data-section="essay">
+            <span class="nav-icon">📝</span> 随笔
+            <span class="skills-nav-badge">3</span>
+          </button>
+          <button class="skills-nav-item" data-section="paper">
+            <span class="nav-icon">✏️</span> 论文写作
+            <span class="skills-nav-badge">2</span>
+          </button>
+          <div style="height:16px"></div>
+          <div class="skills-nav-title">管理</div>
+          <button class="skills-nav-item" data-section="installed">
+            <span class="nav-icon">✅</span> 已安装
+          </button>
+          <button class="skills-nav-item" data-section="updates">
+            <span class="nav-icon">🔄</span> 可更新
+            <span class="skills-nav-badge" style="background:oklch(94% 0.06 85); color:oklch(45% 0.12 85);">2</span>
+          </button>
+        </div>
+
+        <!-- Right content -->
+        <div class="skills-content">
+
+          <!-- ═══ All Skills ═══ -->
+          <div class="skills-section active" id="sec-all">
+            <div class="section-header">
+              <h2>Skill 市场</h2>
+              <p>为不同功能模块安装 AI 技能插件，扩展 NexusResearch 的能力。</p>
+            </div>
+
+            <div class="search-bar">
+              <span class="search-icon">🔍</span>
+              <input type="text" placeholder="搜索 Skill 名称、描述或标签…" id="skillSearch">
+            </div>
+
+            <div class="filter-row">
+              <button class="filter-chip active">全部</button>
+              <button class="filter-chip">已安装</button>
+              <button class="filter-chip">文献</button>
+              <button class="filter-chip">阅读</button>
+              <button class="filter-chip">写作</button>
+              <button class="filter-chip">数据分析</button>
+              <button class="filter-chip">绘图</button>
+            </div>
+
+            <!-- Skill cards -->
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.04 255);">📊</div>
+              <div class="skill-info">
+                <div class="skill-name">文献计量分析</div>
+                <div class="skill-desc">对文献集合进行引文网络分析、H-index 统计、合作网络可视化，输出学术影响力报告。</div>
+                <div class="skill-meta">
+                  <span class="skill-tag module">📚 文献管理</span>
+                  <span class="skill-tag">数据分析</span>
+                  <span class="skill-tag">可视化</span>
+                </div>
+              </div>
+              <div class="skill-actions">
+                <span class="skill-status installed">已安装</span>
+                <button class="btn-sm">配置</button>
+              </div>
+            </div>
+
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.06 142);">🤖</div>
+              <div class="skill-info">
+                <div class="skill-name">智能摘要生成</div>
+                <div class="skill-desc">使用多模型对比为文献自动生成结构化摘要：研究目的、方法、关键发现、局限性。</div>
+                <div class="skill-meta">
+                  <span class="skill-tag module">📚 文献管理</span>
+                  <span class="skill-tag">摘要</span>
+                  <span class="skill-tag">多模型</span>
+                </div>
+              </div>
+              <div class="skill-actions">
+                <span class="skill-status installed">已安装</span>
+                <button class="btn-sm">配置</button>
+              </div>
+            </div>
+
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.08 85);">🏷️</div>
+              <div class="skill-info">
+                <div class="skill-name">自动标签分类</div>
+                <div class="skill-desc">基于文献内容自动分配主题标签、研究方法标签和学科分类，支持自定义标签体系。</div>
+                <div class="skill-meta">
+                  <span class="skill-tag module">📚 文献管理</span>
+                  <span class="skill-tag">分类</span>
+                  <span class="skill-tag">NLP</span>
+                </div>
+              </div>
+              <div class="skill-actions">
+                <span class="skill-status installed">已安装</span>
+                <button class="btn-sm">配置</button>
+              </div>
+            </div>
+
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.06 20);">🔍</div>
+              <div class="skill-info">
+                <div class="skill-name">语义搜索</div>
+                <div class="skill-desc">基于向量嵌入的语义级文献检索，支持自然语言查询，超越关键词匹配。</div>
+                <div class="skill-meta">
+                  <span class="skill-tag module">📚 文献管理</span>
+                  <span class="skill-tag">检索</span>
+                  <span class="skill-tag">向量</span>
+                </div>
+              </div>
+              <div class="skill-actions">
+                <span class="skill-status available">未安装</span>
+                <button class="btn-sm primary">安装</button>
+              </div>
+            </div>
+
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.04 255);">💬</div>
+              <div class="skill-info">
+                <div class="skill-name">论文问答增强</div>
+                <div class="skill-desc">基于 RAG 的深度论文问答，自动检索相关段落，生成有引用来源的回答。</div>
+                <div class="skill-meta">
+                  <span class="skill-tag module">📖 文献阅读</span>
+                  <span class="skill-tag">RAG</span>
+                  <span class="skill-tag">问答</span>
+                </div>
+              </div>
+              <div class="skill-actions">
+                <span class="skill-status installed">已安装</span>
+                <button class="btn-sm">配置</button>
+              </div>
+            </div>
+
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.08 255);">📐</div>
+              <div class="skill-info">
+                <div class="skill-name">公式识别 (OCR)</div>
+                <div class="skill-desc">从 PDF 中提取数学公式并转换为 LaTeX 格式，支持复杂多行公式和矩阵。</div>
+                <div class="skill-meta">
+                  <span class="skill-tag module">📖 文献阅读</span>
+                  <span class="skill-tag">OCR</span>
+                  <span class="skill-tag">LaTeX</span>
+                </div>
+              </div>
+              <div class="skill-actions">
+                <span class="skill-status available">未安装</span>
+                <button class="btn-sm primary">安装</button>
+              </div>
+            </div>
+
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.06 142);">📝</div>
+              <div class="skill-info">
+                <div class="skill-name">阅读笔记模板</div>
+                <div class="skill-desc">自动为论文生成结构化阅读笔记模板：核心贡献、方法论、实验设计、可复现性评估。</div>
+                <div class="skill-meta">
+                  <span class="skill-tag module">📖 文献阅读</span>
+                  <span class="skill-tag">模板</span>
+                  <span class="skill-tag">笔记</span>
+                </div>
+              </div>
+              <div class="skill-actions">
+                <span class="skill-status installed">已安装</span>
+                <button class="btn-sm">配置</button>
+              </div>
+            </div>
+
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.06 85);">✍️</div>
+              <div class="skill-info">
+                <div class="skill-name">学术润色</div>
+                <div class="skill-desc">针对中英文论文的学术写作润色，修正语法、提升表达、保持学术语体。</div>
+                <div class="skill-meta">
+                  <span class="skill-tag module">📝 随笔</span>
+                  <span class="skill-tag module">✏️ 论文写作</span>
+                  <span class="skill-tag">润色</span>
+                </div>
+              </div>
+              <div class="skill-actions">
+                <span class="skill-status installed">已安装</span>
+                <button class="btn-sm">配置</button>
+              </div>
+            </div>
+
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.08 20);">🔄</div>
+              <div class="skill-info">
+                <div class="skill-name">改写 & 续写</div>
+                <div class="skill-desc">多种改写模式：学术化、简化、翻译风格转换、段落续写，保持语义一致性。</div>
+                <div class="skill-meta">
+                  <span class="skill-tag module">📝 随笔</span>
+                  <span class="skill-tag">改写</span>
+                  <span class="skill-tag">续写</span>
+                </div>
+              </div>
+              <div class="skill-actions">
+                <span class="skill-status installed">已安装</span>
+                <button class="btn-sm">配置</button>
+              </div>
+            </div>
+
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.04 255);">💡</div>
+              <div class="skill-info">
+                <div class="skill-name">灵感收集器</div>
+                <div class="skill-desc">从剪贴板、网页划词、PDF 批注中一键收集灵感片段，自动关联到随笔和文献。</div>
+                <div class="skill-meta">
+                  <span class="skill-tag module">📝 随笔</span>
+                  <span class="skill-tag">收集</span>
+                  <span class="skill-tag">关联</span>
+                </div>
+              </div>
+              <div class="skill-actions">
+                <span class="skill-status available">未安装</span>
+                <button class="btn-sm primary">安装</button>
+              </div>
+            </div>
+
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.06 142);">🎨</div>
+              <div class="skill-info">
+                <div class="skill-name">论文配图生成</div>
+                <div class="skill-desc">使用 TikZ / matplotlib / DALL·E 生成论文配图：流程图、数据图、概念示意图。</div>
+                <div class="skill-meta">
+                  <span class="skill-tag module">✏️ 论文写作</span>
+                  <span class="skill-tag">绘图</span>
+                  <span class="skill-tag">TikZ</span>
+                </div>
+              </div>
+              <div class="skill-actions">
+                <span class="skill-status installed">已安装</span>
+                <button class="btn-sm">配置</button>
+              </div>
+            </div>
+
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.08 85);">📚</div>
+              <div class="skill-info">
+                <div class="skill-name">参考文献格式化</div>
+                <div class="skill-desc">自动从 DOI / 标题生成标准引用格式（APA、MLA、GB/T 7714 等），支持 BibTeX 导出。</div>
+                <div class="skill-meta">
+                  <span class="skill-tag module">✏️ 论文写作</span>
+                  <span class="skill-tag">引用</span>
+                  <span class="skill-tag">BibTeX</span>
+                </div>
+              </div>
+              <div class="skill-actions">
+                <span class="skill-status updating">有更新</span>
+                <button class="btn-sm primary">更新</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ Installed ═══ -->
+          <div class="skills-section" id="sec-installed">
+            <div class="section-header">
+              <h2>已安装的 Skills</h2>
+              <p>管理已安装的技能插件，查看使用情况和配置。</p>
+            </div>
+
+            <div class="config-panel">
+              <div class="installed-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div style="font-size:20px;">📊</div>
+                  <div>
+                    <h3 style="font-size:14px; font-weight:600;">文献计量分析</h3>
+                    <div style="font-size:11px; color:var(--muted);">v2.1.0 · 文献管理模块</div>
+                  </div>
+                </div>
+                <div style="display:flex; gap:6px;">
+                  <button class="btn-sm">停用</button>
+                  <button class="btn-sm danger">卸载</button>
+                </div>
+              </div>
+              <div class="config-row">
+                <div class="config-label">状态</div>
+                <div class="config-value" style="color:var(--success);">● 运行中</div>
+              </div>
+              <div class="config-row">
+                <div class="config-label">上次使用</div>
+                <div class="config-value">今天 14:32</div>
+              </div>
+              <div class="config-row">
+                <div class="config-label">累计调用</div>
+                <div class="config-value">127 次</div>
+              </div>
+            </div>
+
+            <div class="config-panel">
+              <div class="installed-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div style="font-size:20px;">🤖</div>
+                  <div>
+                    <h3 style="font-size:14px; font-weight:600;">智能摘要生成</h3>
+                    <div style="font-size:11px; color:var(--muted);">v1.8.3 · 文献管理模块</div>
+                  </div>
+                </div>
+                <div style="display:flex; gap:6px;">
+                  <button class="btn-sm">停用</button>
+                  <button class="btn-sm danger">卸载</button>
+                </div>
+              </div>
+              <div class="config-row">
+                <div class="config-label">状态</div>
+                <div class="config-value" style="color:var(--success);">● 运行中</div>
+              </div>
+              <div class="config-row">
+                <div class="config-label">上次使用</div>
+                <div class="config-value">今天 11:05</div>
+              </div>
+              <div class="config-row">
+                <div class="config-label">累计调用</div>
+                <div class="config-value">89 次</div>
+              </div>
+            </div>
+
+            <div class="config-panel">
+              <div class="installed-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div style="font-size:20px;">💬</div>
+                  <div>
+                    <h3 style="font-size:14px; font-weight:600;">论文问答增强</h3>
+                    <div style="font-size:11px; color:var(--muted);">v3.0.1 · 文献阅读模块</div>
+                  </div>
+                </div>
+                <div style="display:flex; gap:6px;">
+                  <button class="btn-sm">停用</button>
+                  <button class="btn-sm danger">卸载</button>
+                </div>
+              </div>
+              <div class="config-row">
+                <div class="config-label">状态</div>
+                <div class="config-value" style="color:var(--success);">● 运行中</div>
+              </div>
+              <div class="config-row">
+                <div class="config-label">上次使用</div>
+                <div class="config-value">昨天 22:18</div>
+              </div>
+              <div class="config-row">
+                <div class="config-label">累计调用</div>
+                <div class="config-value">342 次</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ Updates ═══ -->
+          <div class="skills-section" id="sec-updates">
+            <div class="section-header">
+              <h2>可用更新</h2>
+              <p>2 个已安装的 Skill 有新版本可用。</p>
+            </div>
+
+            <div class="config-panel">
+              <div class="installed-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div style="font-size:20px;">📚</div>
+                  <div>
+                    <h3 style="font-size:14px; font-weight:600;">参考文献格式化</h3>
+                    <div style="font-size:11px; color:var(--muted);">v2.3.0 → v2.4.1</div>
+                  </div>
+                </div>
+                <button class="btn-sm primary">更新</button>
+              </div>
+              <div style="font-size:12px; color:var(--muted); line-height:1.6; margin-top:8px;">
+                <strong>更新内容：</strong>新增 IEEE 格式支持；修复 DOI 解析中的编码问题；提升 BibTeX 导出速度 40%。
+              </div>
+            </div>
+
+            <div class="config-panel">
+              <div class="installed-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div style="font-size:20px;">🏷️</div>
+                  <div>
+                    <h3 style="font-size:14px; font-weight:600;">自动标签分类</h3>
+                    <div style="font-size:11px; color:var(--muted);">v1.2.0 → v1.3.2</div>
+                  </div>
+                </div>
+                <button class="btn-sm primary">更新</button>
+              </div>
+              <div style="font-size:12px; color:var(--muted); line-height:1.6; margin-top:8px;">
+                <strong>更新内容：</strong>支持自定义标签层级；新增学科分类预设（生物、化学、物理、CS）；标签准确率提升 12%。
+              </div>
+            </div>
+
+            <div style="margin-top:16px; display:flex; gap:8px;">
+              <button class="btn-sm primary">全部更新</button>
+              <button class="btn-sm">检查更新</button>
+            </div>
+          </div>
+
+          <!-- ═══ Module-specific sections ═══ -->
+          <div class="skills-section" id="sec-literature">
+            <div class="section-header">
+              <h2>📚 文献管理 Skills</h2>
+              <p>4 个技能已安装，用于文献搜索、分类、摘要生成和计量分析。</p>
+            </div>
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.04 255);">📊</div>
+              <div class="skill-info">
+                <div class="skill-name">文献计量分析</div>
+                <div class="skill-desc">引文网络分析、H-index 统计、合作网络可视化</div>
+                <div class="skill-meta"><span class="skill-tag module">📚 文献管理</span></div>
+              </div>
+              <div class="skill-actions"><span class="skill-status installed">已安装</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.06 142);">🤖</div>
+              <div class="skill-info">
+                <div class="skill-name">智能摘要生成</div>
+                <div class="skill-desc">多模型对比生成结构化摘要</div>
+                <div class="skill-meta"><span class="skill-tag module">📚 文献管理</span></div>
+              </div>
+              <div class="skill-actions"><span class="skill-status installed">已安装</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.08 85);">🏷️</div>
+              <div class="skill-info">
+                <div class="skill-name">自动标签分类</div>
+                <div class="skill-desc">基于内容自动分配主题标签</div>
+                <div class="skill-meta"><span class="skill-tag module">📚 文献管理</span></div>
+              </div>
+              <div class="skill-actions"><span class="skill-status installed">已安装</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.06 20);">🔍</div>
+              <div class="skill-info">
+                <div class="skill-name">语义搜索</div>
+                <div class="skill-desc">基于向量嵌入的语义级文献检索</div>
+                <div class="skill-meta"><span class="skill-tag module">📚 文献管理</span></div>
+              </div>
+              <div class="skill-actions"><span class="skill-status available">未安装</span><button class="btn-sm primary">安装</button></div>
+            </div>
+          </div>
+
+          <div class="skills-section" id="sec-reader">
+            <div class="section-header">
+              <h2>📖 文献阅读 Skills</h2>
+              <p>3 个技能已安装，用于深度问答、公式识别和阅读笔记生成。</p>
+            </div>
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.04 255);">💬</div>
+              <div class="skill-info">
+                <div class="skill-name">论文问答增强</div>
+                <div class="skill-desc">基于 RAG 的深度论文问答</div>
+                <div class="skill-meta"><span class="skill-tag module">📖 文献阅读</span></div>
+              </div>
+              <div class="skill-actions"><span class="skill-status installed">已安装</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.08 255);">📐</div>
+              <div class="skill-info">
+                <div class="skill-name">公式识别 (OCR)</div>
+                <div class="skill-desc">PDF 数学公式提取并转 LaTeX</div>
+                <div class="skill-meta"><span class="skill-tag module">📖 文献阅读</span></div>
+              </div>
+              <div class="skill-actions"><span class="skill-status available">未安装</span><button class="btn-sm primary">安装</button></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.06 142);">📝</div>
+              <div class="skill-info">
+                <div class="skill-name">阅读笔记模板</div>
+                <div class="skill-desc">自动结构化阅读笔记</div>
+                <div class="skill-meta"><span class="skill-tag module">📖 文献阅读</span></div>
+              </div>
+              <div class="skill-actions"><span class="skill-status installed">已安装</span></div>
+            </div>
+          </div>
+
+          <div class="skills-section" id="sec-essay">
+            <div class="section-header">
+              <h2>📝 随笔 Skills</h2>
+              <p>3 个技能已安装，用于学术润色、改写续写和灵感收集。</p>
+            </div>
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.06 85);">✍️</div>
+              <div class="skill-info">
+                <div class="skill-name">学术润色</div>
+                <div class="skill-desc">中英文论文写作润色</div>
+                <div class="skill-meta"><span class="skill-tag module">📝 随笔</span></div>
+              </div>
+              <div class="skill-actions"><span class="skill-status installed">已安装</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.08 20);">🔄</div>
+              <div class="skill-info">
+                <div class="skill-name">改写 & 续写</div>
+                <div class="skill-desc">多种改写模式与段落续写</div>
+                <div class="skill-meta"><span class="skill-tag module">📝 随笔</span></div>
+              </div>
+              <div class="skill-actions"><span class="skill-status installed">已安装</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.04 255);">💡</div>
+              <div class="skill-info">
+                <div class="skill-name">灵感收集器</div>
+                <div class="skill-desc">一键收集灵感片段并关联文献</div>
+                <div class="skill-meta"><span class="skill-tag module">📝 随笔</span></div>
+              </div>
+              <div class="skill-actions"><span class="skill-status available">未安装</span><button class="btn-sm primary">安装</button></div>
+            </div>
+          </div>
+
+          <div class="skills-section" id="sec-paper">
+            <div class="section-header">
+              <h2>✏️ 论文写作 Skills</h2>
+              <p>2 个技能已安装，用于配图生成和参考文献格式化。</p>
+            </div>
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.06 142);">🎨</div>
+              <div class="skill-info">
+                <div class="skill-name">论文配图生成</div>
+                <div class="skill-desc">TikZ / matplotlib / DALL·E 配图</div>
+                <div class="skill-meta"><span class="skill-tag module">✏️ 论文写作</span></div>
+              </div>
+              <div class="skill-actions"><span class="skill-status installed">已安装</span></div>
+            </div>
+            <div class="skill-card">
+              <div class="skill-icon" style="background:oklch(94% 0.08 85);">📚</div>
+              <div class="skill-info">
+                <div class="skill-name">参考文献格式化</div>
+                <div class="skill-desc">自动生成引用格式 & BibTeX</div>
+                <div class="skill-meta"><span class="skill-tag module">✏️ 论文写作</span></div>
+              </div>
+              <div class="skill-actions"><span class="skill-status updating">有更新</span><button class="btn-sm primary">更新</button></div>
+            </div>
+          </div>
+
+        </div><!-- /skills-content -->
+      </div><!-- /skills-layout -->
+    </div><!-- /content -->
+  </div><!-- /main -->
+
+  <!-- status bar -->
+  <div class="status-bar">
+    <div class="status-left">
+      <span><span class="status-dot"></span></span>
+      <span>NexusResearch v1.0.0</span>
+    </div>
+    <div class="status-right">
+      <span>已安装 9 / 12 Skills</span>
+    </div>
+  </div>
+</div><!-- /right-wrapper -->
+
+<script>
+  // Skills nav
+  document.querySelectorAll('.skills-nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.skills-nav-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.skills-section').forEach(s => s.classList.remove('active'));
+      document.getElementById('sec-' + btn.dataset.section).classList.add('active');
+    });
+  });
+
+  // Filter chips
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  });
+
+  // Toggle
+  document.querySelectorAll('.toggle').forEach(t => {
+    t.addEventListener('click', () => t.classList.toggle('on'));
+  });
+
+  // Close tab
+  document.querySelectorAll('.t-close').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      const tab = btn.closest('.tab');
+      if (tab.classList.contains('active')) {
+        window.location.href = 'index.html';
+      } else {
+        tab.remove();
+      }
+    });
+  });
+</script>
+</body>
+</html>

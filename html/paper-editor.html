@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusResearch — 论文写作</title>
+<style>
+  :root {
+    --bg:      oklch(99% 0.002 240);
+    --surface: oklch(100% 0 0);
+    --fg:      oklch(18% 0.012 250);
+    --muted:   oklch(54% 0.012 250);
+    --border:  oklch(92% 0.005 250);
+    --border-strong: oklch(86% 0.006 250);
+    --accent:  oklch(58% 0.18 255);
+    --accent-hover: oklch(52% 0.20 255);
+    --success: oklch(65% 0.18 142);
+    --warning: oklch(75% 0.15 85);
+    --danger:  oklch(55% 0.22 20);
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    --font-body:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    height: 100vh; display: flex; flex-direction: row;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* ── tab bar — integrated document tabs ── */
+  .tab-bar {
+    height: 36px; display: flex; align-items: stretch;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 8px; gap: 0; flex-shrink: 0;
+    overflow-x: auto; user-select: none; -webkit-user-select: none;
+  }
+  .tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 12px; height: 100%;
+    font-size: 12px; color: var(--muted);
+    cursor: pointer; text-decoration: none;
+    white-space: nowrap; position: relative;
+    background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    transition: color var(--motion-fast) var(--ease-standard),
+                background var(--motion-fast) var(--ease-standard);
+  }
+  .tab:hover { color: var(--fg); background: oklch(0% 0 0 / 3%); }
+  .tab.active {
+    color: var(--fg); background: transparent;
+    border-bottom-color: var(--accent);
+  }
+  .tab .t-icon { font-size: 13px; flex-shrink: 0; }
+  .tab .t-title { overflow: hidden; text-overflow: ellipsis; max-width: 200px; font-weight: 500; }
+  .tab .t-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 3px;
+    font-size: 14px; line-height: 1; color: var(--muted);
+    opacity: 0; cursor: pointer; border: none; background: transparent;
+    transition: opacity 0.12s, background 0.12s, color 0.12s;
+    flex-shrink: 0; margin-left: 2px;
+  }
+  .tab:hover .t-close { opacity: 0.5; }
+  .tab .t-close:hover { opacity: 1 !important; background: var(--danger); color: #fff; }
+  /* sidebar — collapsible, full height */
+  .sidebar {
+    width: 52px; background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 0;
+    flex-shrink: 0; height: 100vh;
+    overflow: hidden;
+    }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 6px; padding: 0 8px; }
+  .sidebar-item {
+    width: 36px; height: 36px; border-radius: 8px;
+    border: none; background: transparent; color: var(--muted);
+    cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.1s, background 0.1s;
+    text-decoration: none; position: relative;
+    flex-shrink: 0;
+  }
+  .sidebar-item:hover { background: oklch(96% 0.004 250); }
+  .sidebar-item.active { color: var(--accent); background: oklch(96% 0.04 255); }
+
+  /* sidebar tooltip on hover */
+  .sidebar-item[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+    margin-left: 8px; padding: 4px 10px;
+    background: var(--fg); color: var(--surface);
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+    border-radius: 6px; pointer-events: none;
+    opacity: 0; transition: opacity 0.15s;
+    z-index: 100;
+  }
+  .sidebar-item[data-tooltip]:hover::after { opacity: 1; }
+
+  /* right-wrapper + main + content */
+  .right-wrapper { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .main { flex: 1; display: flex; overflow: hidden; }
+  /* content */
+  .content { flex: 1; display: flex; overflow: hidden; }
+  /* -- file tree -- */
+  .file-tree {
+    width: 220px; min-width: 200px; max-width: 320px;
+    background: var(--surface);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .file-tree-header {
+    height: 38px; padding: 0 16px; font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .file-tree-header button {
+    width: 22px; height: 22px; border-radius: 4px;
+    border: 1px solid var(--border); background: var(--surface);
+    cursor: pointer; font-size: 13px; color: var(--muted);
+  }
+  .file-tree-body { flex: 1; overflow-y: auto; padding: 8px; }
+  .ft-folder { margin-bottom: 4px; }
+  .ft-folder-name {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 8px; border-radius: 5px;
+    font-size: 12px; font-weight: 500; color: var(--muted);
+    cursor: pointer;
+  }
+  .ft-folder-name:hover { background: oklch(96% 0.004 250); }
+  .ft-folder-name .arrow { font-size: 10px; transition: transform 0.15s; }
+  .ft-folder-name .arrow.open { transform: rotate(90deg); }
+  .ft-file {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 8px 5px 24px; border-radius: 5px;
+    font-size: 12px; cursor: pointer; color: var(--muted);
+  }
+  .ft-file:hover { background: oklch(96% 0.004 250); }
+  .ft-file.active { background: oklch(96% 0.04 255); color: var(--accent); font-weight: 500; }
+  .ft-file .icon { font-size: 13px; }
+  /* -- editor -- */
+  .editor-pane {
+    flex: 1; display: flex; flex-direction: column;
+    min-width: 360px; overflow: hidden;
+  }
+  .resize-handle {
+    width: 9px; min-width: 9px; flex-shrink: 0;
+    cursor: col-resize; background: transparent;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s, border-color 0.15s;
+    position: relative; z-index: 5;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .resize-handle::after {
+    content: '⋮';
+    font-size: 10px;
+    color: var(--border);
+    letter-spacing: -3px;
+    transition: color 0.15s;
+    user-select: none;
+  }
+  .resize-handle:hover, .resize-handle.active {
+    background: oklch(97% 0.005 250);
+    border-color: var(--accent);
+  }
+  .resize-handle:hover::after, .resize-handle.active::after {
+    color: var(--accent);
+  }
+  .pane-header {
+    height: 38px; padding: 0 16px; font-size: 12px; font-weight: 600;
+    color: var(--muted); letter-spacing: 0.03em; text-transform: uppercase;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px;
+  }
+  .pane-header .template-select {
+    font-size: 11px; padding: 3px 8px; border: 1px solid var(--border);
+    border-radius: 4px; background: var(--surface); color: var(--muted);
+    cursor: pointer; font-family: var(--font-body);
+  }
+  .pane-header .spacer { flex: 1; }
+  .pane-header .compile-btn {
+    padding: 4px 12px; font-family: var(--font-body); font-size: 11px; font-weight: 500;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 4px; cursor: pointer; flex-shrink: 0; white-space: nowrap;
+  }
+  .pane-header .compile-btn:hover { background: var(--accent-hover); }
+  .compile-status {
+    font-size: 11px; display: flex; align-items: center; gap: 4px;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .compile-status.success { color: var(--success); }
+  /* latex editor */
+  .latex-editor {
+    flex: 1; overflow-y: auto; padding: 16px;
+    background: oklch(98% 0.002 250);
+    font-family: var(--font-mono); font-size: 13px; line-height: 1.7;
+    color: var(--fg); border: none; outline: none; resize: none;
+    tab-size: 2;
+  }
+  .latex-editor::selection { background: oklch(90% 0.08 255); }
+  /* PDF preview — scaled A4 page */
+  .pdf-preview {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    padding: 20px 0;
+    background: oklch(94% 0.004 250);
+    display: flex; justify-content: center;
+    align-items: flex-start;
+  }
+  .pdf-scaler {
+    transform-origin: top center;
+    width: 595px;
+    height: 842px;
+    flex: none;
+  }
+  .pdf-render {
+    width: 595px; /* A4 at 72 dpi */
+    height: 842px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid oklch(86% 0.005 250);
+    border-radius: 2px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    padding: 48px 52px;
+    font-family: 'Latin Modern Roman', 'Source Serif 4', Georgia, serif;
+    font-size: 10px; line-height: 1.5;
+    position: relative;
+  }
+  .pdf-render h1 { font-size: 14px; font-weight: 700; text-align: center; margin-bottom: 2px; line-height: 1.3; }
+  .pdf-render .authors { text-align: center; font-size: 10px; color: oklch(40% 0.01 250); margin-bottom: 10px; }
+  .pdf-render .abstract-title { font-weight: 600; margin-bottom: 2px; font-size: 10px; }
+  .pdf-render .abstract { font-size: 9px; margin-bottom: 14px; padding: 8px 10px; background: oklch(98% 0.002 250); border-radius: 3px; line-height: 1.5; }
+  .pdf-render h2 { font-size: 11px; font-weight: 600; margin: 10px 0 5px; }
+  .pdf-render p { margin-bottom: 4px; text-indent: 1.5em; font-size: 10px; }
+  .pdf-render .equation { text-align: center; margin: 10px 0; font-family: var(--font-mono); font-size: 10px; }
+  .pdf-render .cite { color: var(--accent); font-size: 9px; }
+  .pdf-page-num { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--muted); }
+  /* -- combined right panel -- */
+  .right-panel {
+    width: 400px; min-width: 300px; max-width: 500px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .right-panel-tabs {
+    display: flex; flex-direction: row; border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .rp-tab {
+    padding: 9px 16px; text-align: center;
+    font-size: 11px; font-weight: 500; color: var(--muted);
+    cursor: pointer; border: none; border-bottom: 2px solid transparent;
+    background: none; font-family: var(--font-body);
+    white-space: nowrap;
+  }
+  .rp-tab:hover { color: var(--fg); }
+  .rp-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .right-panel-body { flex: 1; display: flex; flex-direction: row; }
+  .rp-view { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .rp-view.active { display: flex; }
+  .ai-input-footer { padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; display: flex; gap: 8px; align-items: center; }
+  .ai-input-footer input { flex: 1; font-family: var(--font-body); font-size: 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; outline: none; }
+  .ai-input-footer input:focus { border-color: var(--accent); }
+  .ai-input-footer button { padding: 6px 14px; background: var(--accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-family: var(--font-body); font-size: 12px; white-space: nowrap; }
+  /* PDF view inside right panel */
+  .rp-view .pdf-preview {
+    flex: 1; overflow-y: auto; padding: 16px 12px;
+    background: oklch(96% 0.003 250);
+    display: flex; justify-content: center;
+  }
+  /* AI sub-tabs inside right panel */
+  .ai-sub-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .ai-sub-tab {
+    flex: 1; padding: 8px; text-align: center;
+    font-size: 11px; font-weight: 500; color: var(--muted);
+    cursor: pointer; border: none; border-bottom: 2px solid transparent;
+    background: none; font-family: var(--font-body);
+  }
+  .ai-sub-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .ai-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+  .ai-content .ai-tab { display: none; padding: 16px; overflow: hidden; }
+  .ai-content .ai-tab.active { display: flex; flex-direction: column; flex: 1; overflow: visible; }
+  .draw-preview { flex: 1; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--border); border-radius: 8px; background: oklch(98% 0.003 250); min-height: 200px; }
+  .draw-preview-placeholder { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .ai-tab h4 { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+  .linked-projects { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .linked-projects .link { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: oklch(97% 0.004 250); border-radius: 6px; margin-top: 6px; }
+  .polish-mode { display: flex; flex-direction: row; gap: 6px; margin-bottom: 14px; }
+  .polish-mode button {
+    font-size: 12px; padding: 8px 12px; text-align: left;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface); cursor: pointer;
+    font-family: var(--font-body);
+  }
+  .polish-mode button:hover { border-color: var(--accent); }
+  .polish-result {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; font-size: 12px; line-height: 1.6;
+    background: oklch(97% 0.004 250);
+  }
+  .polish-result .actions { display: flex; gap: 8px; margin-top: 10px; }
+  .polish-result .actions button {
+    font-size: 11px; padding: 4px 10px;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--surface); cursor: pointer;
+    font-family: var(--font-body);
+  }
+  .polish-result .actions .accept { background: var(--success); color: #fff; border-color: var(--success); }
+  /* status bar */
+  .status-bar {
+    height: 28px; background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 12px; font-size: 11px; color: var(--muted); gap: 16px;
+  }
+  .status-bar .right { margin-left: auto; }
+  #aitab-log.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  #aitab-log .compile-log {
+    flex: 1; overflow-y: auto;
+    font-family: var(--font-mono); font-size: 11px;
+    background: transparent; color: var(--fg);
+    padding: 0; line-height: 1.8;
+    white-space: pre-wrap;
+  }
+  .compile-log .err { color: var(--danger); }
+  .compile-log .warn { color: var(--warning); }
+  .compile-log .info { color: var(--muted); }
+  .compile-log .success { color: var(--success); }
+</style>
+</head>
+<body>
+
+  <div class="sidebar" id="global-sidebar">
+  <div class="sidebar-nav">
+<a href="literature-manager.html" class="sidebar-item" data-tooltip="文献管理" title="文献管理">📚</a>
+    <a href="literature-reader.html" class="sidebar-item" data-tooltip="文献阅读" title="文献阅读">📖</a>
+    <a href="essay.html" class="sidebar-item" data-tooltip="随笔" title="随笔">📝</a>
+    <a href="paper-editor.html" class="sidebar-item active" data-tooltip="论文写作" title="论文写作">✏️</a>
+    </div>
+    <div style="flex:1"></div>
+    <div class="sidebar-nav">
+<a href="skills.html" class="sidebar-item" data-tooltip="Skills">🧩</a>
+    <a href="settings.html" class="sidebar-item" data-tooltip="设置">⚙️</a>
+    </div>
+    </div>
+
+  <div class="right-wrapper">
+  <div class="tab-bar" id="tab-bar">
+    <a href="literature-manager.html" class="tab"><span class="t-icon">📑</span><span class="t-title">文献管理</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="literature-reader.html" class="tab"><span class="t-icon">📖</span><span class="t-title">Attention Is All You Need</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="essay.html" class="tab"><span class="t-icon">📝</span><span class="t-title">LLM在药物发现中的应用</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="paper-editor.html" class="tab active"><span class="t-icon">✏️</span><span class="t-title">Transformer分子生成</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="skills.html" class="tab"><span class="t-icon">🧩</span><span class="t-title">Skill 管理</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="settings.html" class="tab"><span class="t-icon">⚙️</span><span class="t-title">设置</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+  </div>
+
+<div class="main">
+    <div class="content">
+      <!-- file tree -->
+      <div class="file-tree" id="pe-file-tree">
+        <div class="file-tree-header">
+          工程文件 <button title="新建文件">+</button>
+        </div>
+        <div class="file-tree-body">
+          <div class="ft-folder">
+            <div class="ft-folder-name"><span class="arrow open">▶</span> 📁 paper-molgen/</div>
+            <div class="ft-file active"><span class="icon">📄</span> main.tex</div>
+            <div class="ft-file"><span class="icon">📄</span> references.bib</div>
+          </div>
+          <div class="ft-folder">
+            <div class="ft-folder-name"><span class="arrow">▶</span> 📁 sections/</div>
+            <div class="ft-file"><span class="icon">📄</span> abstract.tex</div>
+            <div class="ft-file"><span class="icon">📄</span> introduction.tex</div>
+            <div class="ft-file"><span class="icon">📄</span> related_work.tex</div>
+            <div class="ft-file"><span class="icon">📄</span> method.tex</div>
+            <div class="ft-file"><span class="icon">📄</span> experiments.tex</div>
+            <div class="ft-file"><span class="icon">📄</span> conclusion.tex</div>
+          </div>
+          <div class="ft-folder">
+            <div class="ft-folder-name"><span class="arrow">▶</span> 📁 figures/</div>
+            <div class="ft-file"><span class="icon">🖼</span> architecture.pdf</div>
+            <div class="ft-file"><span class="icon">🖼</span> results.pdf</div>
+          </div>
+          <div class="ft-folder">
+            <div class="ft-folder-name"><span class="arrow">▶</span> 📁 style/</div>
+            <div class="ft-file"><span class="icon">📄</span> neurips_2024.sty</div>
+          </div>
+          <div class="ft-folder">
+            <div class="ft-folder-name"><span class="arrow">▶</span> 📁 output/</div>
+            <div class="ft-file"><span class="icon">📄</span> main.pdf</div>
+            <div class="ft-file"><span class="icon">📄</span> main.log</div>
+          </div>
+        </div>
+      </div>
+  
+      <div class="resize-handle" id="handle-pe-tree"></div>
+      <!-- LaTeX editor -->
+      <div class="editor-pane" id="pe-editor-pane">
+        <div class="pane-header">
+          <span>main.tex</span>
+          <select class="template-select">
+            <option>NeurIPS 2024</option>
+            <option>ICML 2024</option>
+            <option>arXiv 预印本</option>
+            <option>IEEE Trans.</option>
+            <option>Elsevier</option>
+          </select>
+          <span class="spacer"></span>
+          <span class="compile-status success">● 编译成功</span>
+          <button class="compile-btn" onclick="compile()">▶ 编译</button>
+        </div>
+        <textarea class="latex-editor" id="latex-editor">\documentclass{article}
+  \usepackage[utf8]{inputenc}
+  \usepackage{amsmath,amssymb}
+  \usepackage{graphicx}
+  \usepackage{hyperref}
+  \usepackage[style=apa]{biblatex}
+  \addbibresource{references.bib}
+  
+  \title{Molecular Graph Generation via Transformer-based Architectures}
+  \author{Chen et al.}
+  \date{}
+  
+  \begin{document}
+  \maketitle
+  
+  \begin{abstract}
+  We present a novel approach to molecular graph generation using
+  transformer-based architectures. Our method encodes molecular
+  structures as graph sequences and employs self-attention
+  mechanisms to capture long-range dependencies between atoms
+  and functional groups.
+  
+  The key innovation is the integration of graph positional
+  encoding with multi-head self-attention, allowing the model to
+  simultaneously consider both local chemical constraints and
+  global molecular properties.
+  
+  We evaluate on ZINC 250K and ChEMBL benchmarks.
+  \end{abstract}
+  
+  \section{Introduction}
+  
+  Molecular generation is a fundamental task in computational
+  drug discovery. Traditional approaches rely on rule-based
+  enumeration or variational autoencoders with string-based
+  molecular representations \cite{gomez2018}.
+  
+  Recent advances in transformer architectures have opened new
+  possibilities for sequence-based molecular generation. The
+  self-attention mechanism is particularly well-suited for
+  capturing the long-range dependencies inherent in molecular
+  structures \cite{vaswani2017}.
+  
+  \section{Method}
+  
+  \subsection{Graph Sequence Encoding}
+  
+  We represent a molecular graph $\mathcal{G} = (V, E)$ as a
+  sequence of atom tokens, where each atom $v \in V$ is encoded
+  with its atomic number, formal charge, and hybridization state.
+  
+  \subsection{Transformer Architecture}
+  
+  Our model consists of $L = 6$ transformer layers with
+  $h = 8$ attention heads and hidden dimension $d = 512$. The
+  attention mechanism computes:
+  
+  \begin{equation}
+  \text{Attention}(Q, K, V) = \text{softmax}\left(
+  \frac{QK^T}{\sqrt{d_k}}\right)V
+  \end{equation}
+  
+  \section{Experiments}
+  
+  We evaluate on the ZINC 250K dataset.
+  
+  \begin{itemize}
+    \item Validity: 99.2\%
+    \item Novelty: 95.8\%
+    \item Uniqueness: 99.7\%
+  \end{itemize}
+  
+  \section{Conclusion}
+  
+  Transformer-based architectures offer a promising direction
+  for molecular graph generation, achieving competitive results
+  across standard benchmarks.
+  
+  \printbibliography
+  \end{document}</textarea>
+      </div>
+  
+      <div class="resize-handle" id="handle-pe-right"></div>
+      <!-- combined right panel: PDF preview + AI -->
+      <div class="right-panel" id="pe-right-panel">
+        <div class="right-panel-tabs">
+          <button class="rp-tab active" onclick="switchRpView('pdf', this)">PDF 预览</button>
+          <button class="rp-tab" onclick="switchRpView('ai', this)">AI 助手</button>
+        </div>
+        <div class="right-panel-body">
+          <!-- PDF preview view -->
+          <div class="rp-view active" id="rpview-pdf">
+            <div class="pane-header">
+              <span style="font-size:11px;color:var(--muted);">源码 ↔ PDF 同步</span>
+              <span class="spacer"></span>
+              <span style="font-size:11px;color:var(--muted);">8 页 · 142 KB</span>
+            </div>
+            <div class="pdf-preview" id="pdf-preview-container">
+              <div class="pdf-scaler" id="pdf-scaler">
+              <div class="pdf-render">
+                <h1>Molecular Graph Generation via<br>Transformer-based Architectures</h1>
+                <div class="authors">Chen et al.</div>
+                <div class="abstract-title">Abstract</div>
+                <div class="abstract">
+                  We present a novel approach to molecular graph generation using transformer-based architectures. Our method encodes molecular structures as graph sequences and employs self-attention mechanisms to capture long-range dependencies between atoms and functional groups. The key innovation is the integration of graph positional encoding with multi-head self-attention. We evaluate on ZINC 250K and ChEMBL benchmarks.
+                </div>
+                <h2>1 Introduction</h2>
+                <p>Molecular generation is a fundamental task in computational drug discovery. Traditional approaches rely on rule-based enumeration or variational autoencoders with string-based molecular representations <span class="cite">[Gomez et al., 2018]</span>.</p>
+                <p>Recent advances in transformer architectures have opened new possibilities for sequence-based molecular generation. The self-attention mechanism is particularly well-suited for capturing the long-range dependencies inherent in molecular structures <span class="cite">[Vaswani et al., 2017]</span>.</p>
+                <h2>2 Method</h2>
+                <p style="font-weight:600;">2.1 Graph Sequence Encoding</p>
+                <p>We represent a molecular graph G = (V, E) as a sequence of atom tokens, where each atom v ∈ V is encoded with its atomic number, formal charge, and hybridization state.</p>
+                <p style="font-weight:600;">2.2 Transformer Architecture</p>
+                <p>Our model consists of L = 6 transformer layers with h = 8 attention heads and hidden dimension d = 512. The attention mechanism computes:</p>
+                <div class="equation">Attention(Q, K, V) = softmax(QK<sup>T</sup> / √d<sub>k</sub>) V</div>
+                <h2>3 Experiments</h2>
+                <p>We evaluate on the ZINC 250K dataset.</p>
+                <p>· Validity: 99.2%<br>· Novelty: 95.8%<br>· Uniqueness: 99.7%</p>
+                <h2>4 Conclusion</h2>
+                <p>Transformer-based architectures offer a promising direction for molecular graph generation, achieving competitive results across standard benchmarks.</p>
+                <div class="pdf-page-num">1</div>
+              </div>
+              </div>
+            </div>
+          </div>
+          <!-- AI view -->
+          <div class="rp-view" id="rpview-ai">
+            <div class="ai-sub-tabs">
+              <button class="ai-sub-tab active" onclick="switchAiTab('qa', this)">问答</button>
+              <button class="ai-sub-tab" onclick="switchAiTab('polish', this)">润色</button>
+              <button class="ai-sub-tab" onclick="switchAiTab('draw', this)">绘图</button>
+              <button class="ai-sub-tab" onclick="switchAiTab('log', this)">日志</button>
+            </div>
+            <div class="ai-content">
+              <!-- Q&A tab -->
+              <div class="ai-tab active" id="aitab-qa">
+                <div class="linked-projects">
+                  <h4>关联项目</h4>
+                  <div class="link">📝 随笔：LLM在药物发现中的应用</div>
+                  <div class="link">🔬 实验：MolGPT 复现</div>
+                </div>
+                <h4>AI 问答</h4>
+                <p style="font-size:12px;color:var(--muted);">AI 可读取当前 .tex 全文 + 关联随笔 + 实验数据作为上下文。</p>
+              </div>
+              <!-- Polish tab -->
+              <div class="ai-tab" id="aitab-polish">
+                <h4>学术润色</h4>
+                <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">在编辑器中选中文本，选择润色模式：</p>
+                <div class="polish-mode">
+                  <button onclick="showPolishResult('academic')">📖 学术规范 — 按学术写作规范改写</button>
+                  <button onclick="showPolishResult('concise')">✂ 简洁精炼 — 去除冗余表达</button>
+                  <button onclick="showPolishResult('expand')">📝 详细展开 — 对简略描述进行阐述</button>
+                  <button onclick="showPolishResult('keep')">🔄 保持原意 — 在保持原意基础上优化</button>
+                </div>
+                <div class="polish-result" id="polish-result" style="display:none;">
+                  <div style="font-weight:600;font-size:11px;color:var(--accent);margin-bottom:6px;">润色结果</div>
+                  <div id="polish-text"></div>
+                  <div class="actions">
+                    <button class="accept" onclick="acceptPolish()">✓ 接受</button>
+                    <button onclick="document.getElementById('polish-result').style.display='none'">✕ 拒绝</button>
+                    <button onclick="showDiff()">⇔ 对比原文</button>
+                  </div>
+                </div>
+              </div>
+              <!-- Draw tab -->
+              <div class="ai-tab" id="aitab-draw">
+                <div class="draw-preview">
+                  <div class="draw-preview-placeholder">
+                    <span style="font-size:24px;opacity:0.3;">🎨</span>
+                    <span style="color:var(--muted);font-size:12px;">生成的配图将在此预览</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Log tab -->
+              <div class="ai-tab" id="aitab-log" style="padding:0;">
+                <div class="compile-log">
+  <span class="info">[INFO]  LaTeX 编译开始 — NeurIPS 2024 模板</span>
+  <span class="info">[INFO]  pdflatex main.tex — 第 1 遍</span>
+  <span class="info">[INFO]  Output written on main.pdf (8 pages, 142KB)</span>
+  <span class="warn">[WARN]  Overfull \hbox (12.3pt too wide) in paragraph at lines 45--48</span>
+  <span class="info">[INFO]  BibTeX 处理完成 — 2 条引用</span>
+  <span class="info">[INFO]  pdflatex main.tex — 第 2 遍</span>
+  <span class="info">[INFO]  pdflatex main.tex — 第 3 遍</span>
+  <span class="success">[OK]  编译成功 — 0 错误, 1 警告</span>
+                </div>
+              </div>
+            </div>
+            <div class="ai-input-footer">
+              <input placeholder="向AI提问论文内容…">
+              <button>发送</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</div><!-- /main -->
+
+<div class="status-bar">
+  <span>● 当前模型: Claude 4 Opus</span>
+  <span>模板: NeurIPS 2024</span>
+  <span>本月费用: $3.12</span>
+  <span class="right">自动保存 · 2 秒前 · NexusResearch v1.0.0</span>
+</div>
+</div><!-- /right-wrapper -->
+
+<script>
+
+  // --- Tab close ---
+  function closeTab(e) {
+    e.preventDefault(); e.stopPropagation();
+    var tab = e.currentTarget.closest('.tab');
+    var wasActive = tab.classList.contains('active');
+    tab.remove();
+    if (wasActive) window.location.href = 'index.html';
+  }
+
+  // PDF page proportional scaling — fits inside container without clipping
+  function scalePdf() {
+    var container = document.getElementById('pdf-preview-container');
+    var scaler = document.getElementById('pdf-scaler');
+    if (!container || !scaler) return;
+    var cw = container.clientWidth - 48;  // padding allowance
+    var ch = container.clientHeight - 48;
+    if (cw <= 0 || ch <= 0) return;
+    var scale = Math.min(cw / 595, ch / 842, 1);
+    scaler.style.transform = 'scale(' + scale + ')';
+    scaler.style.transformOrigin = 'top center';
+    scaler.style.flex = 'none';
+    // Layout height = scaled visual height so scrollbar works correctly
+    scaler.style.height = Math.round(842 * scale) + 'px';
+  }
+  scalePdf();
+  new ResizeObserver(scalePdf).observe(document.getElementById('pdf-preview-container') || document.body);
+
+  // re-scale when switching to PDF tab (panel may have been hidden)
+  function switchRpView(view, el) {
+    document.querySelectorAll('.rp-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.rp-view').forEach(v => v.classList.remove('active'));
+    document.getElementById('rpview-' + view).classList.add('active');
+    if (view === 'pdf') setTimeout(scalePdf, 0);
+  }
+
+  // AI sub-tabs inside the AI view
+  function switchAiTab(tab, el) {
+    document.querySelectorAll('.ai-sub-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.ai-content .ai-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('aitab-' + tab).classList.add('active');
+    var footer = document.querySelector('.ai-input-footer');
+    var inp = footer.querySelector('input');
+    var btn = footer.querySelector('button');
+    if (tab === 'log') { footer.style.display = 'none'; }
+    else { footer.style.display = ''; }
+    if (tab === 'draw') { inp.placeholder = '描述你要生成的配图…'; btn.textContent = '生成'; }
+    else if (tab === 'polish') { inp.placeholder = '选中文本后选择润色模式…'; btn.textContent = '发送'; }
+    else { inp.placeholder = '向AI提问论文内容…'; btn.textContent = '发送'; }
+  }
+
+  function showPolishResult(mode) {
+    const texts = {
+      academic: 'We introduce a transformer-based architecture for molecular graph generation. Our approach encodes molecular topologies as sequential representations and leverages multi-head self-attention to model non-local atomic interactions, thereby achieving chemically valid and structurally diverse outputs.',
+      concise: 'We propose a transformer-based method for molecular graph generation. The model uses self-attention to capture atom-level dependencies, producing valid and diverse molecular structures.',
+      expand: 'We present a comprehensive framework for molecular graph generation that leverages the representational capacity of transformer architectures. Specifically, we encode molecular graphs as ordered sequences of atom embeddings and apply stacked multi-head self-attention layers to learn both local valence constraints and global structural patterns.',
+      keep: 'We present a transformer-based approach for molecular graph generation. Our method encodes molecular structures as sequences and applies multi-head self-attention to capture long-range atomic dependencies, enabling the generation of chemically valid and diverse molecular graphs.'
+    };
+    document.getElementById('polish-result').style.display = 'block';
+    document.getElementById('polish-text').innerHTML = '<p style="font-size:12px;line-height:1.7;">' + texts[mode] + '</p>';
+  }
+  function acceptPolish() {
+    alert('润色文本已替换编辑器中的选中内容。');
+    document.getElementById('polish-result').style.display = 'none';
+  }
+  function showDiff() {
+    document.getElementById('polish-text').innerHTML += '<div style="margin-top:8px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;"><b>原文：</b>We present a novel approach to molecular graph generation using transformer-based architectures. Our method encodes molecular structures as graph sequences and employs self-attention mechanisms to capture long-range dependencies.</div>';
+  }
+  function compile() {
+    const status = document.querySelector('.compile-status');
+    status.textContent = '● 编译中…';
+    status.className = 'compile-status';
+    status.style.color = 'var(--warning)';
+    setTimeout(() => {
+      status.textContent = '● 编译成功';
+      status.className = 'compile-status success';
+    }, 1200);
+  }
+
+  // resize handles — two handles: file tree and right panel
+  (function() {
+    var KEY = 'nr-shared-panels';
+    var fileTree = document.getElementById('pe-file-tree');
+    var rightPanel = document.getElementById('pe-right-panel');
+    var hTree = document.getElementById('handle-pe-tree');
+    var hRight = document.getElementById('handle-pe-right');
+
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e) {}
+    if (saved.fileTree) fileTree.style.width = saved.fileTree + 'px';
+    if (saved.detail) rightPanel.style.width = saved.detail + 'px';
+
+    function persist() {
+      var data = {};
+      try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e) {}
+      data.fileTree = fileTree.offsetWidth;
+      data.detail = rightPanel.offsetWidth;
+      localStorage.setItem(KEY, JSON.stringify(data));
+    }
+
+    function makeResizable(handle, getW, setW, minW) {
+      var dragging, startX, startW;
+      handle.addEventListener('mousedown', function(e) {
+        dragging = true; startX = e.clientX; startW = getW();
+        handle.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+      document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        var w = startW + (e.clientX - startX);
+        var container = fileTree.parentElement;
+        // otherMinW = editorPane(360) + rightPanel(300) + 2 handles
+        var maxW = container.clientWidth - 360 - 300 - 9 * 2;
+        if (maxW < (minW || 80)) maxW = minW || 80;
+        if (w < (minW || 80)) w = minW || 80;
+        if (w > maxW) w = maxW;
+        setW(w);
+      });
+      document.addEventListener('mouseup', function() {
+        if (!dragging) return;
+        dragging = false;
+        handle.classList.remove('active');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        persist();
+      });
+    }
+
+    // Handle 1: file tree width
+    makeResizable(hTree,
+      function() { return fileTree.offsetWidth; },
+      function(w) { fileTree.style.width = w + 'px'; fileTree.style.flex = '0 0 ' + w + 'px'; },
+      150);
+
+    // Handle 2: right panel width (drag right = narrower, drag left = wider)
+    (function() {
+      var dragging, startX, startW;
+      hRight.addEventListener('mousedown', function(e) {
+        dragging = true; startX = e.clientX; startW = rightPanel.offsetWidth;
+        hRight.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+      document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        var w = startW - (e.clientX - startX);
+        var minW = 300;
+        // otherMinW = fileTree(200) + editorPane(360) + 2 handles
+        var container = rightPanel.parentElement;
+        var maxW = container.clientWidth - 200 - 360 - 9 * 2;
+        if (maxW < minW) maxW = minW;
+        if (w < minW) w = minW;
+        if (w > maxW) w = maxW;
+        rightPanel.style.width = w + 'px';
+        rightPanel.style.flex = '0 0 ' + w + 'px';
+        if (typeof scalePdf === 'function') scalePdf();
+      });
+      document.addEventListener('mouseup', function() {
+        if (!dragging) return;
+        dragging = false;
+        hRight.classList.remove('active');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        persist();
+      });
+    })();
+  })();
+
+
+</script>
+</body>
+</html>

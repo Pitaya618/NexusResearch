@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusResearch — 首次引导</title>
+<style>
+  :root {
+    --bg:      oklch(99% 0.002 240);
+    --surface: oklch(100% 0 0);
+    --fg:      oklch(18% 0.012 250);
+    --muted:   oklch(54% 0.012 250);
+    --border:  oklch(92% 0.005 250);
+    --accent:  oklch(58% 0.18 255);
+    --accent-hover: oklch(52% 0.20 255);
+    --success: oklch(65% 0.18 142);
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    --font-body:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    display: flex;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* ── layout ── */
+  .onboarding {
+    max-width: 760px;
+    margin: auto;
+    padding: 60px 40px 80px;
+    width: 100%;
+  }
+  /* ── header ── */
+  .ob-header { text-align: center; margin-bottom: 48px; }
+  .ob-logo {
+    width: 56px; height: 56px;
+    background: var(--accent);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-family: var(--font-display);
+    font-size: 28px; font-weight: 600;
+    margin: 0 auto 20px;
+  }
+  .ob-header h1 {
+    font-family: var(--font-display);
+    font-size: 32px; font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .ob-header p { color: var(--muted); font-size: 15px; line-height: 1.6; }
+  .ob-progress {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 20px;
+  }
+  .ob-progress .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.2s;
+  }
+  .ob-progress .dot.done { background: var(--success); }
+  .ob-progress .dot.active { background: var(--accent); width: 10px; height: 10px; }
+  /* ── module cards ── */
+  .ob-modules { display: flex; flex-direction: column; gap: 12px; }
+  .ob-module {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .ob-module:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .ob-module.done { opacity: 0.7; }
+  .ob-module.done:hover { opacity: 1; }
+  .ob-mod-icon {
+    width: 48px; height: 48px; min-width: 48px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    background: oklch(96% 0.006 250);
+  }
+  .ob-mod-icon.key   { background: oklch(94% 0.04 255); }
+  .ob-mod-icon.pref  { background: oklch(94% 0.04 170); }
+  .ob-mod-icon.tour  { background: oklch(94% 0.04 100); }
+  .ob-mod-icon.data  { background: oklch(94% 0.04 40); }
+  .ob-mod-body { flex: 1; min-width: 0; }
+  .ob-mod-body h3 {
+    font-family: var(--font-display);
+    font-size: 16px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .ob-mod-body p { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .ob-mod-status {
+    font-size: 12px; font-weight: 500;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ob-mod-status.done { color: var(--success); }
+  .ob-mod-status.pending { color: var(--muted); }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--success);
+  }
+  .status-dot.off { background: var(--border); }
+  /* ── footer actions ── */
+  .ob-footer {
+    margin-top: 40px;
+    display: flex; justify-content: center; gap: 12px;
+  }
+  .btn {
+    font-family: var(--font-body);
+    font-size: 14px; font-weight: 500;
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--border); color: var(--fg); }
+  /* ── step panels ── */
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+  .step-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--muted); cursor: pointer;
+    border: none; background: none; font-family: var(--font-body);
+    margin-bottom: 24px; padding: 4px 0;
+  }
+  .step-back:hover { color: var(--fg); }
+  .step-panel h2 {
+    font-family: var(--font-display);
+    font-size: 24px; font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 20px;
+  }
+  /* ── API key form ── */
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block; font-size: 13px; font-weight: 500;
+    color: var(--fg); margin-bottom: 6px;
+  }
+  .form-group select, .form-group input {
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--fg);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-group select:focus, .form-group input:focus { border-color: var(--accent); }
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+  .key-test-result {
+    font-size: 13px; margin-top: 4px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .key-test-result.success { color: var(--success); }
+  .key-test-result.fail { color: var(--danger); }
+  .added-keys { margin-top: 16px; }
+  .added-key {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px;
+    background: oklch(97% 0.004 250);
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .added-key .vendor { font-weight: 500; }
+  .added-key .remove { color: var(--danger); cursor: pointer; font-size: 13px; border: none; background: none; }
+  /* ── preferences ── */
+  .pref-option {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .pref-option:last-child { border-bottom: none; }
+  .pref-option .label { font-size: 14px; font-weight: 500; }
+  .pref-option .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .theme-swatches { display: flex; gap: 10px; }
+  .theme-swatch {
+    width: 72px; height: 48px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .theme-swatch.selected { border-color: var(--accent); }
+  .theme-swatch.light { background: #FAFAFA; }
+  .theme-swatch.dark  { background: #1A1A1A; }
+  .font-size-btns { display: flex; gap: 6px; }
+  .font-size-btn {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-family: var(--font-body);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.15s;
+  }
+  .font-size-btn.selected { border-color: var(--accent); background: oklch(96% 0.04 255); color: var(--accent); }
+  /* ── feature tour ── */
+  .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .feature-card .icon { font-size: 28px; margin-bottom: 8px; }
+  .feature-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .feature-card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  /* ── sample data ── */
+  .sample-list { display: flex; flex-direction: column; gap: 10px; }
+  .sample-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  .sample-item .file-icon { font-size: 20px; }
+  .sample-item .name { font-weight: 500; }
+  .sample-item .type { font-size: 12px; color: var(--muted); margin-left: auto; }
+  .progress-bar {
+    height: 4px; background: var(--border); border-radius: 2px;
+    margin: 24px 0 16px;
+  }
+  .progress-bar .fill {
+    height: 100%; background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+</style>
+</head>
+<body>
+<div class="onboarding">
+  <!-- ── main module selector ── -->
+  <div id="main" class="step-panel active">
+    <div class="ob-header">
+      <div class="ob-logo">N</div>
+      <h1>欢迎使用 NexusResearch</h1>
+      <p>一站式 AI 科研助手，从文献管理到论文产出，全程智能辅助。<br>花两分钟完成初始设置，或直接跳过稍后配置。</p>
+      <div class="ob-progress">
+        <span class="dot active"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+    </div>
+    <div class="ob-modules">
+      <div class="ob-module" onclick="showStep('api-key')">
+        <div class="ob-mod-icon key">🔑</div>
+        <div class="ob-mod-body">
+          <h3>配置 API Key</h3>
+          <p>添加 AI 模型连接 — OpenAI、Anthropic、DeepSeek 等</p>
+        </div>
+        <div class="ob-mod-status pending" id="key-status"><span class="status-dot off"></span> 未配置</div>
+      </div>
+      <div class="ob-module" onclick="showStep('preferences')">
+        <div class="ob-mod-icon pref">🎨</div>
+        <div class="ob-mod-body">
+          <h3>界面偏好</h3>
+          <p>主题、字体大小、语言</p>
+        </div>
+        <div class="ob-mod-status pending" id="pref-status"><span class="status-dot off"></span> 默认</div>
+      </div>
+      <div class="ob-module" onclick="showStep('tour')">
+        <div class="ob-mod-icon tour">🧭</div>
+        <div class="ob-mod-body">
+          <h3>功能概览</h3>
+          <p>了解五大核心模块的用途</p>
+        </div>
+        <div class="ob-mod-status pending" id="tour-status"><span class="status-dot off"></span> 未浏览</div>
+      </div>
+      <div class="ob-module" onclick="showStep('sample')">
+        <div class="ob-mod-icon data">📦</div>
+        <div class="ob-mod-body">
+          <h3>加载示例数据</h3>
+          <p>3 篇文献 + 1 篇随笔 + 1 篇论文 + 1 个实验，体验完整工作流</p>
+        </div>
+        <div class="ob-mod-status pending" id="sample-status"><span class="status-dot off"></span> 未加载</div>
+      </div>
+    </div>
+    <div class="ob-footer">
+      <a href="literature-manager.html" class="btn btn-ghost">跳过，直接开始</a>
+      <button class="btn btn-primary" id="btn-start" onclick="location.href='literature-manager.html'" disabled>开始使用</button>
+    </div>
+  </div>
+
+  <!-- ── API Key step ── -->
+  <div id="api-key" class="step-panel">
+    <button class="step-back" onclick="showStep('main')">← 返回</button>
+    <h2>配置 API Key</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:24px;">不配置 API Key 仍可使用基础功能（文献管理、PDF 阅读等）。完整管理在 设置 → API Key 中。</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>厂商</label>
+        <select id="vendor-select">
+          <option>OpenAI</option>
+          <option>Anthropic</option>
+          <option>DeepSeek</option>
+          <option>阿里云 (Qwen)</option>
+          <option>Google (Gemini)</option>
+          <option>本地 Ollama</option>
+          <option>自定义</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>API Key</label>
+        <input type="password" id="api-key-input" placeholder="sk-...">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>接口风格</label>
+        <select><option>OpenAI 兼容</option><option>Anthropic 兼容</option></select>
+      </div>
+      <div class="form-group">
+        <label>备注（可选）</label>
+        <input type="text" placeholder="例如：个人账号">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button class="btn btn-ghost" style="font-size:13px;" onclick="testKey()">测试连接</button>
+      <button class="btn btn-primary" style="font-size:13px;" onclick="addKey()">添加</button>
+    </div>
+    <div id="key-result" class="key-test-result" style="display:none;"></div>
+    <div class="added-keys" id="added-keys"></div>
+  </div>
+
+  <!-- ── Preferences step ── -->
+  <div id="preferences" class="step-panel">
+    <button class="step-back" onclick="showStep('main')">← 返回</button>
+    <h2>界面偏好</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:24px;">所有选项修改后即时生效。</p>
+    <div class="pref-option">
+      <div><div class="label">主题</div><div class="desc">亮色 / 暗色</div></div>
+      <div class="theme-swatches">
+        <div class="theme-swatch light selected" onclick="selectTheme('light', this)"></div>
+        <div class="theme-swatch dark" onclick="selectTheme('dark', this)"></div>
+      </div>
+    </div>
+    <div class="pref-option">
+      <div><div class="label">字体大小</div><div class="desc">代码编辑器和正文</div></div>
+      <div class="font-size-btns">
+        <div class="font-size-btn" onclick="selectFontSize('12', this)">S</div>
+        <div class="font-size-btn selected" onclick="selectFontSize('14', this)">M</div>
+        <div class="font-size-btn" onclick="selectFontSize('16', this)">L</div>
+      </div>
+    </div>
+    <div class="pref-option">
+      <div><div class="label">正文字体</div><div class="desc">当前：Source Serif 4</div></div>
+      <div style="color:var(--muted);font-size:13px;">系统默认</div>
+    </div>
+    <div class="pref-option">
+      <div><div class="label">代码字体</div><div class="desc">当前：JetBrains Mono</div></div>
+      <div style="color:var(--muted);font-size:13px;">系统默认</div>
+    </div>
+    <div class="pref-option">
+      <div><div class="label">语言</div><div class="desc">V1 仅支持中文简体</div></div>
+      <div style="color:var(--muted);font-size:13px;">中文简体</div>
+    </div>
+  </div>
+
+  <!-- ── Tour step ── -->
+  <div id="tour" class="step-panel">
+    <button class="step-back" onclick="showStep('main')">← 返回</button>
+    <h2>功能概览</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon">📚</div>
+        <h4>文献管理</h4>
+        <p>批量导入 PDF，自动提取元数据与 AI 摘要。标签、收藏夹、引用格式生成。</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📖</div>
+        <h4>文献阅读</h4>
+        <p>PDF 全文阅读，高亮/批注/便签标注，Markdown 笔记，AI 辅助理解论文。</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📝</div>
+        <h4>随笔</h4>
+        <p>Markdown 写作 + AI 对话 + 知识图谱。AI 可直接编辑你的草稿。</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">✏️</div>
+        <h4>论文写作</h4>
+        <p>LaTeX 编辑器 + 实时 PDF 预览。10+ 期刊模板，AI 润色、大纲生成。</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🔬</div>
+        <h4>实验复现</h4>
+        <p>结构化实验设计，数据汇总面板，外部工具对接，AI 辅助分析。</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🤖</div>
+        <h4>模型聚合网关</h4>
+        <p>7+ 主流模型统一接入，智能路由降低成本，用量统计与预算控制。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sample data step ── -->
+  <div id="sample" class="step-panel">
+    <button class="step-back" onclick="showStep('main')">← 返回</button>
+    <h2>加载示例数据</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">体验完整工作流。示例数据带"示例"标签，可在任意模块中批量删除。</p>
+    <div class="sample-list">
+      <div class="sample-item"><span class="file-icon">📄</span><span class="name">Attention Is All You Need</span><span class="type">文献</span></div>
+      <div class="sample-item"><span class="file-icon">📄</span><span class="name">BERT: Pre-training of Deep Bidirectional Transformers</span><span class="type">文献</span></div>
+      <div class="sample-item"><span class="file-icon">📄</span><span class="name">Molecular Graph Generation with Transformer</span><span class="type">文献</span></div>
+      <div class="sample-item"><span class="file-icon">📝</span><span class="name">LLM 在药物发现中的应用</span><span class="type">随笔</span></div>
+      <div class="sample-item"><span class="file-icon">✏️</span><span class="name">基于 Transformer 的分子生成方法</span><span class="type">论文大纲</span></div>
+      <div class="sample-item"><span class="file-icon">🔬</span><span class="name">MolGPT 复现实验</span><span class="type">实验</span></div>
+    </div>
+    <div class="progress-bar" id="load-progress-bar" style="display:none;"><div class="fill" id="load-fill" style="width:0%"></div></div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-primary" onclick="loadSampleData()">加载示例数据</button>
+      <span id="load-status" style="font-size:13px;color:var(--muted);display:flex;align-items:center;"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  const completed = {};
+  function updateProgress() {
+    const keys = ['key','pref','tour','sample'];
+    const count = keys.filter(k => completed[k]).length;
+    const dots = document.querySelectorAll('#main .dot');
+    dots.forEach((d,i) => {
+      d.className = 'dot';
+      if (completed[keys[i]]) d.classList.add('done');
+      if (i === count && count < 4) d.classList.add('active');
+    });
+    document.querySelectorAll('#main .dot.active').forEach((d,i,a) => {
+      if (i > 0) d.classList.remove('active');
+    });
+    const btn = document.getElementById('btn-start');
+    btn.disabled = count < 4;
+    btn.textContent = count === 4 ? '开始使用' : '开始使用';
+    if (count === 4) btn.style.opacity = '1';
+  }
+  function showStep(id) {
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if (id === 'tour') { completed.tour = true; updateProgress(); updateMainStatus('tour-status','已浏览'); }
+    if (id === 'preferences') { completed.pref = true; updateProgress(); updateMainStatus('pref-status','已设置'); }
+  }
+  function updateMainStatus(statusId, text) {
+    const el = document.getElementById(statusId);
+    el.innerHTML = '<span class="status-dot"></span> ' + text;
+    el.classList.remove('pending'); el.classList.add('done');
+  }
+  function testKey() {
+    const res = document.getElementById('key-result');
+    res.style.display = 'flex';
+    res.className = 'key-test-result';
+    const vendor = document.getElementById('vendor-select').value;
+    const key = document.getElementById('api-key-input').value;
+    if (!key) { res.classList.add('fail'); res.textContent = '✕ 请输入 API Key'; return; }
+    res.classList.add('success'); res.textContent = '✓ ' + vendor + ' 连接成功';
+  }
+  function addKey() {
+    const vendor = document.getElementById('vendor-select').value;
+    const key = document.getElementById('api-key-input').value;
+    if (!key) return;
+    const container = document.getElementById('added-keys');
+    const div = document.createElement('div'); div.className = 'added-key';
+    div.innerHTML = '<span class="vendor">' + vendor + '</span><span style="color:var(--muted);font-size:12px;">●●●●●●●●</span><button class="remove" onclick="this.parentElement.remove();if(!document.querySelector(\'.added-key\')){delete completed.key;updateProgress();updateMainStatus(\'key-status\',\'未配置\');document.getElementById(\'key-status\').classList.add(\'pending\');document.getElementById(\'key-status\').classList.remove(\'done\');}">移除</button>';
+    container.appendChild(div);
+    completed.key = true; updateProgress(); updateMainStatus('key-status','已配置');
+    document.getElementById('api-key-input').value = '';
+  }
+  function selectTheme(theme, el) {
+    document.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+  function selectFontSize(size, el) {
+    document.querySelectorAll('.font-size-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+  let loading = false;
+  function loadSampleData() {
+    if (loading) return; loading = true;
+    const bar = document.getElementById('load-progress-bar');
+    const fill = document.getElementById('load-fill');
+    const status = document.getElementById('load-status');
+    bar.style.display = 'block'; status.textContent = '正在加载...';
+    let p = 0;
+    const iv = setInterval(() => {
+      p += Math.random() * 25;
+      if (p >= 100) { p = 100; clearInterval(iv); status.textContent = '✓ 加载完成'; loading = false; completed.sample = true; updateProgress(); updateMainStatus('sample-status','已加载'); }
+      fill.style.width = p + '%';
+    }, 300);
+  }
+</script>
+</body>
+</html>

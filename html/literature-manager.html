@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusResearch — 文献管理</title>
+<style>
+  :root {
+    --bg:      oklch(99% 0.002 240);
+    --surface: oklch(100% 0 0);
+    --fg:      oklch(18% 0.012 250);
+    --muted:   oklch(54% 0.012 250);
+    --border:  oklch(92% 0.005 250);
+    --border-strong: oklch(86% 0.006 250);
+    --accent:  oklch(58% 0.18 255);
+    --accent-hover: oklch(52% 0.20 255);
+    --success: oklch(65% 0.18 142);
+    --warning: oklch(75% 0.15 85);
+    --danger:  oklch(55% 0.22 20);
+    --highlight-yellow: oklch(92% 0.12 95);
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    --font-body:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    height: 100vh; display: flex; flex-direction: row;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* ── tab bar — integrated document tabs ── */
+  .tab-bar {
+    height: 36px; display: flex; align-items: stretch;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 8px; gap: 0; flex-shrink: 0;
+    overflow-x: auto; user-select: none; -webkit-user-select: none;
+  }
+  .tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 12px; height: 100%;
+    font-size: 12px; color: var(--muted);
+    cursor: pointer; text-decoration: none;
+    white-space: nowrap; position: relative;
+    background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    transition: color var(--motion-fast) var(--ease-standard),
+                background var(--motion-fast) var(--ease-standard);
+  }
+  .tab:hover { color: var(--fg); background: oklch(0% 0 0 / 3%); }
+  .tab.active {
+    color: var(--fg); background: transparent;
+    border-bottom-color: var(--accent);
+  }
+  .tab .t-icon { font-size: 13px; flex-shrink: 0; }
+  .tab .t-title { overflow: hidden; text-overflow: ellipsis; max-width: 200px; font-weight: 500; }
+  .tab .t-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 3px;
+    font-size: 14px; line-height: 1; color: var(--muted);
+    opacity: 0; cursor: pointer; border: none; background: transparent;
+    transition: opacity 0.12s, background 0.12s, color 0.12s;
+    flex-shrink: 0; margin-left: 2px;
+  }
+  .tab:hover .t-close { opacity: 0.5; }
+  .tab .t-close:hover { opacity: 1 !important; background: var(--danger); color: #fff; }
+  /* ── sidebar — full height ── */
+  .sidebar {
+    width: 52px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 0;
+    flex-shrink: 0;
+    height: 100vh;
+    overflow: hidden;
+  }
+  /* ── right wrapper — tab-bar + main + status ── */
+  .right-wrapper {
+    flex: 1; display: flex; flex-direction: column;
+    height: 100vh; overflow: hidden; min-width: 0;
+  }
+  /* ── main area ── */
+  .main {
+    flex: 1; display: flex; overflow: hidden; }
+  .sidebar-item {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: none; background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.1s, background 0.1s;
+    flex-shrink: 0;
+    text-decoration: none;
+    position: relative;
+  }
+  .sidebar-item:hover { background: oklch(96% 0.004 250); }
+  .sidebar-item.active { color: var(--accent); background: oklch(96% 0.04 255); }
+
+  /* sidebar tooltip on hover */
+  .sidebar-item[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+    margin-left: 8px; padding: 4px 10px;
+    background: var(--fg); color: var(--surface);
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+    border-radius: 6px; pointer-events: none;
+    opacity: 0; transition: opacity 0.15s;
+    z-index: 100;
+  }
+  .sidebar-item[data-tooltip]:hover::after { opacity: 1; }
+
+  .sidebar-nav { display: flex; flex-direction: column; gap: 6px; padding: 0 8px; }
+  /* ── content ── */
+  .content { flex: 1; display: flex; overflow: hidden; }
+  /* ── left panel: collections & tags ── */
+  .left-panel {
+    width: 240px; min-width: 200px;
+    background: var(--surface);
+    display: flex; flex-direction: column;
+    overflow-x: hidden; overflow-y: auto;
+  }
+  .resize-handle {
+    width: 9px; min-width: 9px; flex-shrink: 0;
+    cursor: col-resize; background: transparent;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s, border-color 0.15s;
+    position: relative; z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .resize-handle::after {
+    content: '⋮';
+    font-size: 10px;
+    color: var(--border);
+    letter-spacing: -3px;
+    transition: color 0.15s;
+    user-select: none;
+  }
+  .resize-handle:hover,
+  .resize-handle.active {
+    background: oklch(97% 0.005 250);
+    border-color: var(--accent);
+  }
+  .resize-handle:hover::after,
+  .resize-handle.active::after {
+    color: var(--accent);
+  }
+  .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+  .panel-section:last-child { border-bottom: none; }
+  .panel-section h4 {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--muted); margin-bottom: 10px;
+  }
+  .collection-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 10px; border-radius: 6px;
+    font-size: 13px; cursor: pointer;
+    transition: background 0.1s;
+  }
+  .collection-item:hover { background: oklch(97% 0.004 250); }
+  .collection-item.active { background: oklch(96% 0.04 255); color: var(--accent); font-weight: 500; }
+  .collection-item .count {
+    font-size: 11px; color: var(--muted);
+    background: oklch(96% 0.004 250);
+    border-radius: 10px; padding: 1px 8px;
+  }
+  .tag-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 6px;
+    font-size: 13px; cursor: pointer;
+    transition: background 0.1s;
+  }
+  .tag-row:hover { background: oklch(97% 0.004 250); }
+  .tag-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .tag-row .count { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .overview-stats { display: flex; flex-direction: column; gap: 8px; }
+  .stat-row { display: flex; justify-content: space-between; font-size: 13px; }
+  .stat-row .val { font-weight: 500; }
+  /* ── center panel: list ── */
+  .center-panel {
+    flex: 1; display: flex; flex-direction: column;
+    min-width: 280px; overflow: hidden;
+  }
+  .center-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .search-input {
+    flex: 1;
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--fg);
+    outline: none;
+    min-width: 0;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .toolbar-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 6px 12px;
+    font-family: var(--font-body); font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface); color: var(--muted);
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.1s;
+  }
+  .toolbar-btn:hover { background: oklch(97% 0.004 250); }
+  .toolbar-btn.active { background: oklch(96% 0.04 255); color: var(--accent); border-color: var(--accent); }
+  .segmented-control {
+    display: inline-flex; align-items: center;
+    border: 1px solid var(--border); border-radius: 7px;
+    background: oklch(97% 0.003 250);
+    }
+  .segment-option {
+    padding: 6px 12px;
+    font-family: var(--font-body); font-size: 12px; font-weight: 500;
+    color: var(--muted); cursor: pointer;
+    white-space: nowrap; user-select: none;
+    transition: background 0.12s, color 0.12s;
+  }
+  .segment-option:first-child { border-right: 1px solid var(--border); }
+  .segment-option.active {
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .lit-list {
+    flex: 1; overflow-y: auto; padding: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .lit-card {
+    display: flex; gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .lit-card:hover { border-color: var(--border-strong); }
+  .lit-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .lit-cover {
+    width: 60px; height: 80px; min-width: 60px;
+    border-radius: 6px;
+    background: oklch(96% 0.006 250);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; }
+  .lit-cover img { width: 100%; height: 100%; object-fit: cover; }
+  .lit-info { flex: 1; min-width: 0; }
+  .lit-info h3 {
+    font-family: var(--font-display);
+    font-size: 14px; font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+    white-space: nowrap; text-overflow: ellipsis;
+  }
+  .lit-meta {
+    font-size: 12px; color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .lit-abstract {
+    font-size: 12px; color: var(--muted);
+    line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    margin-bottom: 8px;
+  }
+  .lit-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .lit-tag {
+    font-size: 11px; font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: oklch(96% 0.008 250);
+    color: var(--muted);
+  }
+  .lit-tag.important { background: oklch(92% 0.05 85); color: oklch(50% 0.08 80); }
+  .lit-tag.read { background: oklch(92% 0.04 170); color: oklch(45% 0.08 160); }
+  /* ── list / table view ── */
+  .lit-table {
+    flex: 1; overflow-y: auto;
+    display: none; flex-direction: column;
+  }
+  .lit-table.visible { display: flex; }
+  .lit-list.hidden { display: none; }
+  .lit-table-header {
+    display: flex; align-items: center;
+    padding: 10px 20px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface); position: sticky; top: 0; z-index: 2;
+    gap: 12px;
+  }
+  .lit-table-row {
+    display: flex; align-items: center;
+    padding: 10px 20px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+    gap: 12px;
+  }
+  .lit-table-row:hover { background: oklch(97% 0.004 250); }
+  .lit-table-row.selected { background: oklch(96% 0.04 255); }
+  .col-title { flex: 2; min-width: 0; font-weight: 500;
+    white-space: nowrap; text-overflow: ellipsis; }
+  .col-authors { flex: 1; min-width: 0; color: var(--muted);
+    white-space: nowrap; text-overflow: ellipsis; }
+  .col-journal { flex: 1; min-width: 0; color: var(--muted);
+    white-space: nowrap; text-overflow: ellipsis; }
+  .col-year { width: 52px; text-align: center; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .col-tags { width: 180px; display: flex; gap: 4px; flex-wrap: nowrap; }
+  .col-tags .lit-tag { white-space: nowrap; }
+  .col-status { width: 56px; text-align: center; }
+  .col-status .dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  }
+  .col-status .dot.read { background: var(--success); }
+  .col-status .dot.unread { background: var(--border-strong); }
+  .sort-arrow { cursor: pointer; user-select: none; }
+  .sort-arrow:hover { color: var(--accent); }
+  /* ── right panel: detail ── */
+  .right-panel {
+    width: 340px; min-width: 260px;
+    background: var(--surface);
+    display: flex; flex-direction: column;
+    overflow-x: hidden; overflow-y: auto;
+  }
+  .detail-empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: var(--muted); padding: 40px;
+    text-align: center; gap: 10px;
+  }
+  .detail-empty .icon { font-size: 40px; opacity: 0.3; }
+  .detail-empty p { font-size: 13px; }
+  .detail-content { display: none; flex-direction: column; }
+  .detail-content.visible { display: flex; }
+  .detail-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .detail-header h2 {
+    font-family: var(--font-display);
+    font-size: 18px; font-weight: 600;
+    letter-spacing: -0.01em; margin-bottom: 8px;
+    line-height: 1.3;
+  }
+  .detail-header .authors { font-size: 13px; color: var(--muted); }
+  .detail-header .venue { font-size: 13px; color: var(--accent); margin-top: 4px; }
+  .detail-tabs {
+    display: flex; border-bottom: 1px solid var(--border);
+  }
+  .detail-tab {
+    flex: 1; padding: 10px; text-align: center;
+    font-size: 12px; font-weight: 500; color: var(--muted);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .detail-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .detail-tab:hover { color: var(--fg); }
+  .detail-body { padding: 20px; flex: 1; }
+  .detail-body .tab-content { display: none; }
+  .detail-body .tab-content.active { display: block; }
+  .detail-body p { font-size: 13px; line-height: 1.7; color: var(--muted); }
+  .detail-field {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; font-size: 13px;
+  }
+  .detail-field .label { color: var(--muted); }
+  .detail-field .value { font-weight: 500; }
+  .cite-block {
+    background: oklch(97% 0.004 250);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: var(--font-mono); font-size: 12px;
+    line-height: 1.6; margin-bottom: 8px;
+    position: relative;
+  }
+  .cite-format { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px;
+    font-size: 11px; padding: 3px 10px;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--surface); color: var(--muted);
+    cursor: pointer;
+  }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .detail-actions {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px;
+  }
+  .btn {
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    padding: 8px 16px; border-radius: 8px;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; border: none; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--fg); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--border); }
+  .btn-danger:hover { border-color: var(--danger); background: oklch(96% 0.02 20); }
+  /* ── status bar ── */
+  .status-bar {
+    height: 28px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 12px;
+    font-size: 11px; color: var(--muted);
+    gap: 16px;
+  }
+  .status-bar .right { margin-left: auto; }
+  .status-model {
+    display: flex; align-items: center; gap: 4px;
+  }
+  .status-model .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+  /* ── bulk actions ── */
+  .bulk-bar {
+    display: none; align-items: center; gap: 10px;
+    padding: 10px 20px;
+    background: oklch(96% 0.04 255);
+    border-bottom: 1px solid var(--accent);
+  }
+  .bulk-bar.visible { display: flex; }
+  .bulk-bar span { font-size: 13px; font-weight: 500; color: var(--accent); }
+</style>
+</head>
+<body>
+
+  <div class="sidebar" id="global-sidebar">
+    <div class="sidebar-nav">
+<a href="literature-manager.html" class="sidebar-item active" data-tooltip="文献管理" title="文献管理">📚</a>
+      <a href="literature-reader.html" class="sidebar-item" data-tooltip="文献阅读" title="文献阅读">📖</a>
+      <a href="essay.html" class="sidebar-item" data-tooltip="随笔" title="随笔">📝</a>
+      <a href="paper-editor.html" class="sidebar-item" data-tooltip="论文写作" title="论文写作">✏️</a>
+    </div>
+    <div style="flex:1"></div>
+    <div class="sidebar-nav">
+<a href="skills.html" class="sidebar-item" data-tooltip="Skills">🧩</a>
+      <a href="settings.html" class="sidebar-item" data-tooltip="设置">⚙️</a>
+    </div>
+</div>
+
+  <div class="right-wrapper">
+  <div class="tab-bar" id="tab-bar">
+    <a href="literature-manager.html" class="tab active"><span class="t-icon">📑</span><span class="t-title">文献管理</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="literature-reader.html" class="tab"><span class="t-icon">📖</span><span class="t-title">Attention Is All You Need</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="essay.html" class="tab"><span class="t-icon">📝</span><span class="t-title">LLM在药物发现中的应用</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="paper-editor.html" class="tab"><span class="t-icon">✏️</span><span class="t-title">Transformer分子生成</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="skills.html" class="tab"><span class="t-icon">🧩</span><span class="t-title">Skill 管理</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="settings.html" class="tab"><span class="t-icon">⚙️</span><span class="t-title">设置</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+  </div>
+<div class="main">
+    <div class="content">
+      <!-- left panel: collections & tags -->
+      <div class="left-panel">
+        <div class="panel-section">
+          <h4>收藏夹</h4>
+          <div class="collection-item active"><span>全部文献</span><span class="count">12</span></div>
+          <div class="collection-item"><span>⭐ 重要</span><span class="count">4</span></div>
+          <div class="collection-item"><span>✓ 已读</span><span class="count">7</span></div>
+          <div class="collection-item"><span>○ 未读</span><span class="count">5</span></div>
+          <div class="collection-item"><span>📁 LLM 相关</span><span class="count">6</span></div>
+          <div class="collection-item"><span>📁 分子生成</span><span class="count">3</span></div>
+        </div>
+        <div class="panel-section">
+          <h4>标签</h4>
+          <div class="tag-row"><span class="tag-dot" style="background:oklch(60% 0.18 255)"></span>Transformer<span class="count">5</span></div>
+          <div class="tag-row"><span class="tag-dot" style="background:oklch(60% 0.16 170)"></span>Attention<span class="count">4</span></div>
+          <div class="tag-row"><span class="tag-dot" style="background:oklch(60% 0.15 85)"></span>分子生成<span class="count">3</span></div>
+          <div class="tag-row"><span class="tag-dot" style="background:oklch(60% 0.16 320)"></span>NLP<span class="count">5</span></div>
+          <div class="tag-row"><span class="tag-dot" style="background:oklch(60% 0.18 20)"></span>RL<span class="count">2</span></div>
+        </div>
+        <div class="panel-section">
+          <h4>概览</h4>
+          <div class="overview-stats">
+            <div class="stat-row"><span>总计</span><span class="val">12</span></div>
+            <div class="stat-row"><span>本月新增</span><span class="val">3</span></div>
+            <div class="stat-row"><span>有 AI 摘要</span><span class="val">8</span></div>
+          </div>
+        </div>
+      </div>
+  
+      <div class="resize-handle" id="resize-left"></div>
+  
+      <!-- center panel: list -->
+      <div class="center-panel">
+        <div class="center-toolbar">
+          <input class="search-input" placeholder="搜索标题、作者、摘要…" value="Transformer">
+          <div class="segmented-control" id="view-toggle">
+            <span class="segment-option active" data-view="card" onclick="setView('card')">卡片</span><span class="segment-option" data-view="list" onclick="setView('list')">列表</span>
+          </div>
+          <button class="toolbar-btn">📥 导入</button>
+          <select class="toolbar-btn" style="font-size:12px;">
+            <option>按年份 ↓</option>
+            <option>按标题</option>
+            <option>按导入时间</option>
+          </select>
+        </div>
+        <div class="lit-list" id="lit-list">
+          <!-- literature cards injected by JS -->
+        </div>
+        <!-- table / list view -->
+        <div class="lit-table" id="lit-table">
+          <div class="lit-table-header">
+            <span class="col-title sort-arrow" onclick="sortLit('title')">标题 ▾</span>
+            <span class="col-authors sort-arrow" onclick="sortLit('authors')">作者</span>
+            <span class="col-journal sort-arrow" onclick="sortLit('journal')">期刊</span>
+            <span class="col-year sort-arrow" onclick="sortLit('year')">年份</span>
+            <span class="col-tags">标签</span>
+            <span class="col-status">状态</span>
+          </div>
+          <div id="lit-table-body"></div>
+        </div>
+      </div>
+  
+      <div class="resize-handle" id="resize-right"></div>
+  
+      <!-- right panel: detail -->
+      <div class="right-panel" id="right-panel">
+        <div class="detail-empty" id="detail-empty">
+          <div class="icon">📋</div>
+          <p style="font-weight:500;">选择一篇文献查看详情</p>
+          <p>点击左侧列表中的文献</p>
+        </div>
+        <div class="detail-content" id="detail-content">
+          <div class="detail-header" id="detail-header"></div>
+          <div class="detail-tabs">
+            <div class="detail-tab active" onclick="switchDetailTab('abstract', this)">原摘要</div>
+            <div class="detail-tab" onclick="switchDetailTab('ai', this)">AI 摘要</div>
+            <div class="detail-tab" onclick="switchDetailTab('notes', this)">笔记</div>
+            <div class="detail-tab" onclick="switchDetailTab('cite', this)">引用</div>
+          </div>
+          <div class="detail-body">
+            <div class="tab-content active" id="tab-abstract"></div>
+            <div class="tab-content" id="tab-ai"></div>
+            <div class="tab-content" id="tab-notes"></div>
+            <div class="tab-content" id="tab-cite"></div>
+          </div>
+          <div class="detail-actions">
+            <button class="btn btn-ghost" id="copy-cite-btn">📋 复制引用</button>
+            <button class="btn btn-danger">🗑 删除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+</div><!-- /main -->
+
+<div class="status-bar">
+  <span class="status-model"><span class="dot"></span> 当前模型: Claude 4 Opus</span>
+  <span>本月费用: $2.35</span>
+  <span class="right">NexusResearch v1.0.0</span>
+</div>
+</div><!-- /right-wrapper -->
+
+<script>
+
+  // --- Tab close ---
+  function closeTab(e) {
+    e.preventDefault(); e.stopPropagation();
+    var tab = e.currentTarget.closest('.tab');
+    var wasActive = tab.classList.contains('active');
+    tab.remove();
+    if (wasActive) window.location.href = 'index.html';
+  }
+
+  const literature = [
+    { id:1, title:'Attention Is All You Need', authors:'Vaswani et al.', journal:'NeurIPS', year:2017, doi:'10.48550/arXiv.1706.03762', abstract:'The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.', aiSummary:'**目的**：提出一种完全基于注意力机制的新型神经网络架构。\n\n**方法**：用多头自注意力和位置编码替代循环和卷积结构，实现并行化训练。\n\n**结果**：在 WMT 2014 英德翻译任务上达到 28.4 BLEU，英法翻译 41.8 BLEU，训练时间显著缩短。\n\n**结论**：Transformer 证明了纯注意力架构的可行性，开启了 NLP 领域的新范式。', tags:['Transformer','Attention','NLP'], important:true, read:true },
+    { id:2, title:'BERT: Pre-training of Deep Bidirectional Transformers', authors:'Devlin et al.', journal:'NAACL', year:2019, doi:'10.48550/arXiv.1810.04805', abstract:'We introduce a new language representation model called BERT, which stands for Bidirectional Encoder Representations from Transformers. Unlike recent language representation models, BERT is designed to pre-train deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers.', aiSummary:'**目的**：提出基于双向 Transformer 编码器的预训练语言模型。\n\n**方法**：引入 Masked Language Model 和 Next Sentence Prediction 两个预训练任务，在大量无标注文本上预训练。\n\n**结果**：在 11 项 NLP 任务上刷新 SOTA，GLUE 提升 7.7%，MultiNLI 提升 4.6%。\n\n**结论**：双向预训练显著提升了语言理解能力，预训练-微调范式成为 NLP 主流。', tags:['Transformer','NLP','BERT'], important:true, read:true },
+    { id:3, title:'GPT-3: Language Models are Few-Shot Learners', authors:'Brown et al.', journal:'NeurIPS', year:2020, doi:'10.48550/arXiv.2005.14165', abstract:'Recent work has demonstrated substantial gains on many NLP tasks and benchmarks by pre-training on a large corpus of text followed by fine-tuning on a specific task. While typically task-agnostic in architecture, this method still requires task-specific fine-tuning datasets of thousands or tens of thousands of examples. By contrast, humans can generally perform a new language task from only a few examples or from simple instructions — something which current NLP systems still largely struggle to do.', aiSummary:'**目的**：探索超大规模语言模型的少样本学习能力。\n\n**方法**：训练 175B 参数的 GPT-3 模型，在不进行微调的情况下测试 few-shot / one-shot / zero-shot 性能。\n\n**结果**：GPT-3 在 many-shot 设置下达到 SOTA，在部分任务上 few-shot 表现与微调模型相当。\n\n**结论**：规模化语言模型展现出强大的涌现能力，但也存在生成有害内容等局限。', tags:['Transformer','NLP','GPT'], important:true, read:false },
+    { id:4, title:'Molecular Graph Generation with Transformer-based Models', authors:'Chen et al.', journal:'J. Cheminformatics', year:2023, doi:'10.1186/s13321-023-00742', abstract:'We present a novel approach to molecular graph generation using transformer-based architectures. Our method encodes molecular structures as graph sequences and employs self-attention mechanisms to capture long-range dependencies between atoms and functional groups, enabling the generation of chemically valid and diverse molecular structures.', aiSummary:'**目的**：将 Transformer 架构应用于分子图生成任务。\n\n**方法**：将分子结构编码为图序列，利用自注意力捕获原子和官能团之间的长程依赖关系。\n\n**结果**：在 ZINC 250K 数据集上，生成分子的有效性 99.2%、新颖性 95.8%、唯一性 99.7%。\n\n**结论**：Transformer 在分子生成任务上具有竞争力，为 AI 辅助药物发现提供了新工具。', tags:['Transformer','分子生成','AI制药'], important:false, read:true },
+    { id:5, title:'RLHF: Training Language Models to Follow Instructions', authors:'Ouyang et al.', journal:'NeurIPS', year:2022, doi:'10.48550/arXiv.2203.02155', abstract:'We present InstructGPT, a method for aligning language models with user intent on a wide range of tasks by fine-tuning with human feedback. We show that fine-tuning with human feedback is an effective method for reducing harmful outputs and improving helpfulness.', aiSummary:'**目的**：通过人类反馈微调使语言模型遵循用户意图。\n\n**方法**：收集人类偏好数据训练奖励模型，使用 PPO 算法微调 GPT-3。\n\n**结果**：标注者显著偏好 InstructGPT 输出，有害输出减少 25%，真实性提升。\n\n**结论**：RLHF 是有效的对齐方法，为 ChatGPT 等技术奠定了基础。', tags:['RL','NLP','Alignment'], important:false, read:false },
+    { id:6, title:'Drug Design with Graph Neural Networks and Reinforcement Learning', authors:'Wang et al.', journal:'Nature Machine Intelligence', year:2023, doi:'10.1038/s42256-023-00658', abstract:'We combine graph neural networks with reinforcement learning to design novel drug-like molecules with desired pharmacological properties. Our approach uses a graph-based molecular representation and trains an RL agent to modify molecular structures toward target properties while maintaining chemical validity.', aiSummary:'**目的**：结合 GNN 和 RL 设计具有理想药理特性的新分子。\n\n**方法**：使用图表示分子，训练 RL 智能体向目标性质优化结构。\n\n**结果**：在 Dopamine D2 受体亲和力预测上达到 SOTA，生成分子具可合成性。\n\n**结论**：GNN+RL 为分子优化提供了有效框架。', tags:['RL','分子生成','GNN'], important:true, read:true },
+  ];
+
+  let selectedId = null;
+  let viewMode = (function() {
+    try { return localStorage.getItem('lit-mgr-view') || 'card'; }
+    catch(e) { return 'card'; }
+  })();
+  let sortKey = 'year', sortDir = -1;
+
+  const list = document.getElementById('lit-list');
+  const tableBody = document.getElementById('lit-table-body');
+  const cardSeg = document.querySelector('.segment-option[data-view="card"]');
+  const listSeg = document.querySelector('.segment-option[data-view="list"]');
+
+  function setView(mode) {
+    viewMode = mode;
+    try { localStorage.setItem('lit-mgr-view', mode); } catch(e) {}
+    cardSeg.classList.toggle('active', mode === 'card');
+    listSeg.classList.toggle('active', mode === 'list');
+    document.getElementById('lit-list').classList.toggle('hidden', mode !== 'card');
+    document.getElementById('lit-table').classList.toggle('visible', mode === 'list');
+    if (mode === 'list') renderTable();
+  }
+
+  function sortLit(key) {
+    if (sortKey === key) { sortDir *= -1; }
+    else { sortKey = key; sortDir = key === 'year' ? -1 : 1; }
+    renderTable();
+    document.querySelectorAll('.sort-arrow').forEach(function(el) {
+      el.textContent = el.textContent.replace(/ [▾▴]/g, '');
+    });
+    var activeHeader = document.querySelector('.sort-arrow[onclick*="' + key + '"]');
+    if (activeHeader) activeHeader.textContent += sortDir === 1 ? ' ▴' : ' ▾';
+  }
+
+  function getSorted() {
+    return literature.slice().sort(function(a, b) {
+      var va = a[sortKey], vb = b[sortKey];
+      if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+      if (va < vb) return -1 * sortDir;
+      if (va > vb) return 1 * sortDir;
+      return 0;
+    });
+  }
+
+  function renderTable() {
+    var sorted = getSorted();
+    tableBody.innerHTML = sorted.map(function(l) {
+      var statusClass = l.read ? 'read' : 'unread';
+      var statusLabel = l.read ? '已读' : '未读';
+      return '<div class="lit-table-row'+(selectedId===l.id?' selected':'')+'" onclick="selectLit('+l.id+')" ondblclick="location.href=\'literature-reader.html\'">'+
+        '<span class="col-title">'+l.title+'</span>'+
+        '<span class="col-authors">'+l.authors+'</span>'+
+        '<span class="col-journal">'+l.journal+'</span>'+
+        '<span class="col-year">'+l.year+'</span>'+
+        '<span class="col-tags">'+
+          (l.important ? '<span class="lit-tag important">⭐</span>' : '') +
+          l.tags.slice(0,2).map(function(t){return '<span class="lit-tag">'+t+'</span>';}).join('')+
+          (l.tags.length > 2 ? '<span class="lit-tag">+'+(l.tags.length-2)+'</span>' : '') +
+        '</span>'+
+        '<span class="col-status"><span class="dot '+statusClass+'" title="'+statusLabel+'"></span></span>'+
+      '</div>';
+    }).join('');
+  }
+
+  function renderList() {
+    list.innerHTML = literature.map(l => `
+      <div class="lit-card${selectedId===l.id?' selected':''}" onclick="selectLit(${l.id})" ondblclick="location.href='literature-reader.html'">
+        <div class="lit-cover">${l.tags.includes('Transformer') ? '🔷' : '🧬'}</div>
+        <div class="lit-info">
+          <h3>${l.title}</h3>
+          <div class="lit-meta">${l.authors} · ${l.journal} ${l.year}</div>
+          <div class="lit-abstract">${l.aiSummary.split('\n\n')[0]}</div>
+          <div class="lit-tags">
+            ${l.important ? '<span class="lit-tag important">⭐ 重要</span>' : ''}
+            ${l.read ? '<span class="lit-tag read">✓ 已读</span>' : '<span class="lit-tag">○ 未读</span>'}
+            ${l.tags.map(t => `<span class="lit-tag">${t}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+  function selectLit(id) {
+    selectedId = id;
+    renderList();
+    const l = literature.find(x => x.id === id);
+    if (!l) return;
+    document.getElementById('detail-empty').style.display = 'none';
+    document.getElementById('detail-content').classList.add('visible');
+    document.getElementById('detail-header').innerHTML = `
+      <h2>${l.title}</h2>
+      <div class="authors">${l.authors}</div>
+      <div class="venue">${l.journal} · ${l.year}</div>
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
+        ${l.tags.map(t => `<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:oklch(96% 0.008 250);">${t}</span>`).join('')}
+      </div>
+    `;
+    document.getElementById('tab-abstract').innerHTML = `<p>${l.abstract}</p>`;
+    document.getElementById('tab-ai').innerHTML = `<p style="white-space:pre-line">${l.aiSummary}</p>`;
+    document.getElementById('tab-notes').innerHTML = `<p style="color:var(--muted);">暂无笔记。在文献阅读模块中添加。</p>`;
+    document.getElementById('tab-cite').innerHTML = `
+      <div class="cite-block"><div class="cite-format">APA</div>${l.authors} (${l.year}). ${l.title}. <i>${l.journal}</i>. ${l.doi}<button class="copy-btn" onclick="copyCite(this)">复制</button></div>
+      <div class="cite-block"><div class="cite-format">MLA</div>${l.authors}. "${l.title}." <i>${l.journal}</i>, ${l.year}. ${l.doi}<button class="copy-btn" onclick="copyCite(this)">复制</button></div>
+      <div class="cite-block"><div class="cite-format">GB/T 7714</div>${l.authors}. ${l.title}[J]. ${l.journal}, ${l.year}. ${l.doi}<button class="copy-btn" onclick="copyCite(this)">复制</button></div>
+    `;
+    if (viewMode === 'list') renderTable();
+  }
+  function switchDetailTab(tab, el) {
+    document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.detail-body .tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+  }
+  function copyCite(btn) {
+    const text = btn.parentElement.textContent.replace('复制','').trim();
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✓ 已复制';
+      setTimeout(() => btn.textContent = '复制', 1500);
+    });
+  }
+  // resize handles
+  (function() {
+    var STORAGE_KEY = 'nr-shared-panels';
+    var left = document.querySelector('.left-panel');
+    var right = document.querySelector('.right-panel');
+    var center = document.querySelector('.center-panel');
+    var hLeft = document.getElementById('resize-left');
+    var hRight = document.getElementById('resize-right');
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e) {}
+    if (saved.sidebar) left.style.width = saved.sidebar + 'px';
+    if (saved.detail) right.style.width = saved.detail + 'px';
+
+    function persist() {
+      var data = {};
+      try { data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e) {}
+      data.sidebar = left.offsetWidth;
+      data.detail = right.offsetWidth;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function makeResizable(handle, panelA, panelB, reverse) {
+      var dragging = false, startX, startW;
+      var HANDLE_W = 9;
+      handle.addEventListener('mousedown', function(e) {
+        dragging = true;
+        startX = e.clientX;
+        startW = reverse ? panelB.offsetWidth : panelA.offsetWidth;
+        handle.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+      document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        var delta = reverse ? (startX - e.clientX) : (e.clientX - startX);
+        var newW = startW + delta;
+        var containerW = center.parentElement.offsetWidth;
+        var target = reverse ? panelB : panelA;
+        var minW = 160;
+        var otherMinW, handlesW;
+        if (reverse) {
+          // right handle: left(200) + center(280) + 2 handles
+          otherMinW = 200 + 280;
+          handlesW = 9 * 2;
+        } else {
+          // left handle: center(280) + right(260) + 2 handles
+          otherMinW = 280 + 260;
+          handlesW = 9 * 2;
+        }
+        var maxW = containerW - otherMinW - handlesW;
+        if (maxW < minW) maxW = minW;
+        if (newW < minW) newW = minW;
+        if (newW > maxW) newW = maxW;
+        target.style.width = newW + 'px';
+        target.style.flex = '0 0 ' + newW + 'px';
+      });
+      document.addEventListener('mouseup', function() {
+        if (!dragging) return;
+        dragging = false;
+        handle.classList.remove('active');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        persist();
+      });
+    }
+
+    makeResizable(hLeft, left, center, false);
+    makeResizable(hRight, center, right, true);
+  })();
+
+  renderList();
+  if (viewMode === 'list') setView('list');
+  selectLit(1);
+
+
+</script>
+</body>
+</html>

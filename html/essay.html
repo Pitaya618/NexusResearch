@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusResearch — 随笔</title>
+<style>
+  :root {
+    --bg:      oklch(99% 0.002 240);
+    --surface: oklch(100% 0 0);
+    --fg:      oklch(18% 0.012 250);
+    --muted:   oklch(54% 0.012 250);
+    --border:  oklch(92% 0.005 250);
+    --border-strong: oklch(86% 0.006 250);
+    --accent:  oklch(58% 0.18 255);
+    --accent-hover: oklch(52% 0.20 255);
+    --success: oklch(65% 0.18 142);
+    --warning: oklch(75% 0.15 85);
+    --danger:  oklch(55% 0.22 20);
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    --font-body:    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--fg);
+    height: 100vh; display: flex; flex-direction: row;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* ── tab bar — integrated document tabs ── */
+  .tab-bar {
+    height: 36px; display: flex; align-items: stretch;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 8px; gap: 0; flex-shrink: 0;
+    overflow-x: auto; user-select: none; -webkit-user-select: none;
+  }
+  .tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 12px; height: 100%;
+    font-size: 12px; color: var(--muted);
+    cursor: pointer; text-decoration: none;
+    white-space: nowrap; position: relative;
+    background: transparent;
+    border: none; border-bottom: 2px solid transparent;
+    transition: color var(--motion-fast) var(--ease-standard),
+                background var(--motion-fast) var(--ease-standard);
+  }
+  .tab:hover { color: var(--fg); background: oklch(0% 0 0 / 3%); }
+  .tab.active {
+    color: var(--fg); background: transparent;
+    border-bottom-color: var(--accent);
+  }
+  .tab .t-icon { font-size: 13px; flex-shrink: 0; }
+  .tab .t-title { overflow: hidden; text-overflow: ellipsis; max-width: 200px; font-weight: 500; }
+  .tab .t-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 3px;
+    font-size: 14px; line-height: 1; color: var(--muted);
+    opacity: 0; cursor: pointer; border: none; background: transparent;
+    transition: opacity 0.12s, background 0.12s, color 0.12s;
+    flex-shrink: 0; margin-left: 2px;
+  }
+  .tab:hover .t-close { opacity: 0.5; }
+  .tab .t-close:hover { opacity: 1 !important; background: var(--danger); color: #fff; }
+  /* sidebar — collapsible, full height */
+  .sidebar {
+    width: 52px; background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 0;
+    flex-shrink: 0; height: 100vh;
+    overflow: hidden;
+    }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 6px; padding: 0 8px; }
+  .sidebar-item {
+    width: 36px; height: 36px; border-radius: 8px;
+    border: none; background: transparent; color: var(--muted);
+    cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.1s, background 0.1s;
+    text-decoration: none; position: relative;
+    flex-shrink: 0;
+  }
+  .sidebar-item:hover { background: oklch(96% 0.004 250); }
+  .sidebar-item.active { color: var(--accent); background: oklch(96% 0.04 255); }
+
+  /* sidebar tooltip on hover */
+  .sidebar-item[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+    margin-left: 8px; padding: 4px 10px;
+    background: var(--fg); color: var(--surface);
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+    border-radius: 6px; pointer-events: none;
+    opacity: 0; transition: opacity 0.15s;
+    z-index: 100;
+  }
+  .sidebar-item[data-tooltip]:hover::after { opacity: 1; }
+
+  /* right-wrapper + main + content */
+  .right-wrapper { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  .main { flex: 1; display: flex; overflow: hidden; }
+  /* content */
+  .content { flex: 1; display: flex; overflow: hidden; }
+  .pill-btn {
+    padding: 5px 12px; font-family: var(--font-body);
+    font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); border-radius: 20px;
+    background: var(--surface); color: var(--muted);
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.1s, border-color 0.1s;
+  }
+  .pill-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .pill-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .pill-btn.primary:hover { background: var(--accent-hover); }
+  .pill-select { font-size: 12px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--muted); cursor: pointer; font-family: var(--font-body); }
+  /* three columns */
+  .col-list, .col-editor, .col-chat {
+    display: flex; flex-direction: column;
+    }
+  .col-list   { width: 220px; min-width: 140px; max-width: 400px; flex-shrink: 0; background: var(--surface); overflow: hidden; }
+  .col-editor { flex: 1; min-width: 240px; overflow: hidden; }
+  .col-chat   { width: 340px; min-width: 200px; max-width: 500px; flex-shrink: 0; border-right: none; overflow: hidden; }
+  .col-chat.collapsed { width: 0 !important; min-width: 0 !important; padding: 0; border: none; }
+  .col-chat.collapsed > * { opacity: 0; pointer-events: none; }
+  .resize-handle {
+    width: 9px; min-width: 9px; flex-shrink: 0;
+    cursor: col-resize;
+    background: transparent;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s, border-color 0.15s;
+    position: relative; z-index: 5;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .resize-handle::after {
+    content: '⋮';
+    font-size: 10px;
+    color: var(--border);
+    letter-spacing: -3px;
+    transition: color 0.15s;
+    user-select: none;
+  }
+  .resize-handle:hover, .resize-handle.active {
+    background: oklch(97% 0.005 250);
+    border-color: var(--accent);
+  }
+  .resize-handle:hover::after, .resize-handle.active::after {
+    color: var(--accent);
+  }
+  .resize-handle.hidden { width: 0; min-width: 0; pointer-events: none; opacity: 0; }
+  /* toggle chat button */
+  .col-header .toggle-btn {
+    width: 20px; height: 20px; border-radius: 4px;
+    border: none; background: transparent; color: var(--muted);
+    cursor: pointer; font-size: 13px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.1s, color 0.1s;
+  }
+  .col-header .toggle-btn:hover { background: oklch(94% 0.006 250); color: var(--fg); }
+  /* floating reopen button */
+  .chat-reopen {
+    position: fixed; bottom: 40px; right: 16px; z-index: 20;
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--accent); color: #fff; border: none;
+    cursor: pointer; font-size: 18px; line-height: 1;
+    display: none; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px oklch(30% 0.1 255 / 25%);
+    transition: background 0.15s, transform 0.15s;
+  }
+  .chat-reopen:hover { background: var(--accent-hover); transform: scale(1.06); }
+  .chat-reopen.visible { display: flex; }
+  .col-header {
+    padding: 0 16px; height: 38px; font-size: 12px; font-weight: 600;
+    color: var(--muted); letter-spacing: 0.03em; text-transform: uppercase;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0; box-sizing: border-box;
+  }
+  .col-header .title {
+    font-family: var(--font-display);
+    font-size: 13px; font-weight: 600;
+    letter-spacing: -0.01em; text-transform: none;
+    border: none; background: transparent; color: var(--fg);
+    outline: none; flex: 1; min-width: 0;
+  }
+  .col-header .title:focus { color: var(--accent); }
+  .col-body { flex: 1; }
+  /* markdown editor */
+  .md-editor {
+    width: 100%; height: 100%;
+    font-family: var(--font-body); font-size: 14px; line-height: 1.7;
+    padding: 20px; border: none; resize: none; outline: none;
+    background: transparent; color: var(--fg);
+  }
+  .md-editor:focus { }
+  /* AI chat */
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .chat-msg {
+    padding: 10px 14px; border-radius: 10px;
+    font-size: 13px; line-height: 1.6; max-width: 90%;
+  }
+  .chat-msg.user { align-self: flex-end; background: oklch(96% 0.04 255); color: var(--fg); }
+  .chat-msg.assistant { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); }
+  .chat-msg .diff-add { background: oklch(90% 0.06 160); padding: 1px 3px; border-radius: 2px; }
+  .chat-msg .diff-del { background: oklch(90% 0.06 20); padding: 1px 3px; border-radius: 2px; text-decoration: line-through; }
+  .chat-msg .actions { display: flex; gap: 8px; margin-top: 8px; }
+  .chat-msg .actions button {
+    font-size: 11px; font-weight: 500; padding: 4px 10px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface); cursor: pointer; font-family: var(--font-body);
+    transition: border-color 0.1s;
+  }
+  .chat-msg .actions button:hover { border-color: var(--accent); }
+  .chat-msg .actions button.accept { background: var(--success); color: #fff; border-color: var(--success); }
+  .chat-input-row {
+    display: flex; gap: 8px; padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .chat-input-row input {
+    flex: 1; font-family: var(--font-body); font-size: 13px;
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+    outline: none; background: var(--bg); color: var(--fg);
+  }
+  .chat-input-row input:focus { border-color: var(--accent); }
+  .chat-input-row button {
+    padding: 8px 16px; background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; cursor: pointer;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+  }
+  .chat-input-row button:hover { background: var(--accent-hover); }
+  /* essay list sidebar */
+  .essay-list-header {
+    padding: 0 16px; height: 38px; font-size: 12px; font-weight: 600;
+    color: var(--muted); letter-spacing: 0.03em; text-transform: uppercase;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0; box-sizing: border-box;
+  }
+  .essay-list-header button {
+    width: 20px; height: 20px; border-radius: 4px;
+    border: none; background: transparent;
+    color: var(--muted); cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.1s, color 0.1s;
+  }
+  .essay-list-header button:hover { background: oklch(94% 0.006 250); color: var(--fg); }
+  .essay-list-body { flex: 1; overflow-y: auto; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }
+  .essay-list-row {
+    padding: 8px 10px; border-radius: 7px;
+    cursor: pointer; font-size: 13px; font-weight: 500;
+    color: var(--fg); line-height: 1.4;
+    transition: background 0.1s;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .essay-list-row:hover { background: oklch(96% 0.004 250); }
+  .essay-list-row.active { background: oklch(96% 0.04 255); color: var(--accent); }
+  .essay-list-row .meta {
+    font-size: 11px; font-weight: 400; color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .essay-list-row .tag {
+    font-size: 10px; padding: 1px 6px; border-radius: 10px;
+    border: 1px solid var(--border); color: var(--muted);
+    white-space: nowrap;
+  }
+  /* status bar */
+  .status-bar {
+    height: 28px; background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 12px; font-size: 11px; color: var(--muted); gap: 16px;
+  }
+  .status-bar .right { margin-left: auto; }
+</style>
+</head>
+<body>
+
+  <div class="sidebar" id="global-sidebar">
+  <div class="sidebar-nav">
+<a href="literature-manager.html" class="sidebar-item" data-tooltip="文献管理" title="文献管理">📚</a>
+    <a href="literature-reader.html" class="sidebar-item" data-tooltip="文献阅读" title="文献阅读">📖</a>
+    <a href="essay.html" class="sidebar-item active" data-tooltip="随笔" title="随笔">📝</a>
+    <a href="paper-editor.html" class="sidebar-item" data-tooltip="论文写作" title="论文写作">✏️</a>
+    </div>
+    <div style="flex:1"></div>
+    <div class="sidebar-nav">
+<a href="skills.html" class="sidebar-item" data-tooltip="Skills">🧩</a>
+    <a href="settings.html" class="sidebar-item" data-tooltip="设置">⚙️</a>
+    </div>
+    </div>
+
+  <div class="right-wrapper">
+  <div class="tab-bar" id="tab-bar">
+    <a href="literature-manager.html" class="tab"><span class="t-icon">📑</span><span class="t-title">文献管理</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="literature-reader.html" class="tab"><span class="t-icon">📖</span><span class="t-title">Attention Is All You Need</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="essay.html" class="tab active"><span class="t-icon">📝</span><span class="t-title">LLM在药物发现中的应用</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="paper-editor.html" class="tab"><span class="t-icon">✏️</span><span class="t-title">Transformer分子生成</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="skills.html" class="tab"><span class="t-icon">🧩</span><span class="t-title">Skill 管理</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+    <a href="settings.html" class="tab"><span class="t-icon">⚙️</span><span class="t-title">设置</span><button class="t-close" onclick="closeTab(event)">×</button></a>
+  </div>
+
+<div class="main">
+    <div class="content" style="flex-direction:column;">
+      <!-- three columns -->
+      <div style="flex:1;display:flex;overflow:hidden;">
+        <!-- Essay list -->
+        <div class="col-list" id="essay-list-col">
+          <div class="essay-list-header">随笔列表 <button onclick="newEssay()" title="新建随笔">+</button></div>
+          <div class="essay-list-body" id="essay-list-body">
+            <div class="essay-list-row active" onclick="switchEssay(this)" data-title="LLM 在药物发现中的应用" data-tag="灵感" data-content="essay-drug">
+              LLM 在药物发现中的应用
+              <span class="meta">2,340 字 · <span class="tag">灵感</span></span>
+            </div>
+            <div class="essay-list-row" onclick="switchEssay(this)" data-title="Attention 机制思考" data-tag="文献笔记" data-content="essay-attn">
+              Attention 机制思考
+              <span class="meta">1,860 字 · <span class="tag">文献笔记</span></span>
+            </div>
+            <div class="essay-list-row" onclick="switchEssay(this)" data-title="数据增强实验思路" data-tag="实验草稿" data-content="essay-data">
+              数据增强实验思路
+              <span class="meta">890 字 · <span class="tag">实验草稿</span></span>
+            </div>
+            <div class="essay-list-row" onclick="switchEssay(this)" data-title="RL 优化分子性质综述" data-tag="综述" data-content="essay-rl">
+              RL 优化分子性质综述
+              <span class="meta">3,100 字 · <span class="tag">综述</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="resize-handle" id="handle-essay-left"></div>
+        <!-- Markdown editor -->
+        <div class="col-editor" id="essay-editor-col">
+          <div class="col-header" id="editor-col-title" style="display:flex;align-items:center;gap:8px;">
+            <input class="title" value="LLM 在药物发现中的应用" onchange="document.querySelector('.tab.active').childNodes[2].textContent='随笔：'+this.value" style="flex:1;min-width:0;">
+            <button class="pill-btn">🏷 灵感</button>
+            <select class="pill-select"><option>导入到论文写作</option><option>导入到实验模块</option></select>
+            <button class="pill-btn" onclick="toggleChat()" id="toolbar-chat-toggle">💬 AI</button>
+            <button class="pill-btn">⚙</button>
+          </div>
+          <div class="col-body">
+            <textarea class="md-editor" id="md-editor"># LLM 在药物发现中的应用
+  
+  ## 研究背景
+  
+  目前药物发现周期长、成本高（约 10 年、$2.6B）。传统方法依赖于高通量筛选和经验驱动的分子优化。近年来 LLM 和生成式 AI 为加速这一流程带来了新的可能性。
+  
+  ## 初步想法
+  
+  ### 1. Transformer 用于分子生成
+  - 将 SMILES 字符串视为序列，利用 Transformer 的自回归生成能力
+  - 预训练 + 微调范式 → 针对特定靶点的分子生成
+  - 关键挑战：化学有效性、可合成性、多样性
+  
+  ### 2. 强化学习优化分子性质
+  - 将分子生成建模为序列决策过程
+  - 奖励函数综合考虑：亲和力、ADMET、可合成性
+  - 可能出现的问题：奖励 hacking、模式坍塌
+  
+  ## 待验证假设
+  
+  $$\hat{y} = f_{\theta}(x_{\text{mol}})$$
+  
+  - 假设 1：Transformer 的注意力机制能够捕获分子中远距离原子间的相互作用
+  - 假设 2：多任务预训练能提升少样本分子优化性能
+  
+  ## 文献调研线索
+  - [标注 p.1: "attention mechanism..."] 来自 Attention Is All You Need
+  - MolGPT: 使用 GPT 架构进行分子生成
+  - DrugGPT: 结合 RL 的药物设计</textarea>
+          </div>
+        </div>
+        <div class="resize-handle" id="handle-essay-right"></div>
+        <!-- AI Chat -->
+        <div class="col-chat" id="essay-chat-col">
+          <div class="col-header">AI 对话 <span style="font-weight:400;font-size:11px;">Claude 4 Opus</span> <button class="toggle-btn" onclick="toggleChat()" title="收起面板">✕</button></div>
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-msg assistant">👋 我已读取你的随笔内容。关于 LLM 在药物发现中的应用，我看到你已经梳理了 Transformer 分子生成和强化学习优化两个方向。需要我帮你深入分析哪个部分？</div>
+            <div class="chat-msg user">帮我把第二部分的思路整理得更清晰</div>
+            <div class="chat-msg assistant">
+              好的。基于你的草稿，我重新组织了"初步想法"部分的结构：
+              <br><br>
+              <strong>建议修改：</strong>
+              <br>
+              <span class="diff-del">### 1. Transformer 用于分子生成</span>
+              <br>
+              <span class="diff-add">### 1. 基于 Transformer 的分子生成</span>
+              <br><br>
+              <span class="diff-add">**技术路线**：将分子 SMILES 视为序列数据，利用 Transformer 自注意力机制捕获原子间长程依赖。</span>
+              <br><br>
+              我还建议在挑战部分增加"训练数据偏差"这一项。
+              <div class="actions">
+                <button class="accept" onclick="acceptEdit(this)">✓ 接受</button>
+                <button onclick="rejectEdit(this)">✕ 拒绝</button>
+                <button onclick="editSuggestion(this)">✎ 微调</button>
+              </div>
+            </div>
+          </div>
+          <div class="chat-input-row">
+            <input id="chat-input" placeholder="输入问题，AI 可读取左侧随笔全文…" onkeydown="if(event.key==='Enter')sendChat()">
+            <button onclick="sendChat()">发送</button>
+          </div>
+        </div>
+      </div>
+    </div>
+</div><!-- /main -->
+
+<div class="status-bar">
+  <span>● 当前模型: Claude 4 Opus</span>
+  <span>本月费用: $2.85</span>
+  <span class="right">自动保存 · 5 秒前 · NexusResearch v1.0.0</span>
+</div>
+</div><!-- /right-wrapper -->
+
+<script>
+
+  // --- Tab close ---
+  function closeTab(e) {
+    e.preventDefault(); e.stopPropagation();
+    var tab = e.currentTarget.closest('.tab');
+    var wasActive = tab.classList.contains('active');
+    tab.remove();
+    if (wasActive) window.location.href = 'index.html';
+  }
+
+  // --- Chat panel toggle ---
+  var chatCol = document.getElementById('essay-chat-col');
+  var handleRight = document.getElementById('handle-essay-right');
+  var reopenBtn = document.getElementById('chat-reopen-btn');
+  var chatOpen = true;
+  var chatWidthBeforeCollapse = 340;
+
+  var toolbarBtn = document.getElementById('toolbar-chat-toggle');
+  function toggleChat() {
+    chatOpen = !chatOpen;
+    if (chatOpen) {
+      chatCol.classList.remove('collapsed');
+      chatCol.style.width = chatWidthBeforeCollapse + 'px';
+      handleRight.classList.remove('hidden');
+      reopenBtn.classList.remove('visible');
+      toolbarBtn.textContent = '💬 AI';
+      toolbarBtn.classList.remove('primary');
+    } else {
+      chatWidthBeforeCollapse = chatCol.offsetWidth || 340;
+      chatCol.classList.add('collapsed');
+      handleRight.classList.add('hidden');
+      reopenBtn.classList.add('visible');
+      toolbarBtn.textContent = '💬 打开 AI';
+      toolbarBtn.classList.add('primary');
+    }
+    // persist
+    var KEY = 'nr-shared-panels';
+    var data = {};
+    try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e) {}
+    data.detail = chatOpen ? (chatCol.offsetWidth || chatWidthBeforeCollapse) : 0;
+    data.chatOpen = chatOpen;
+    data.chatWidthBeforeCollapse = chatWidthBeforeCollapse;
+    localStorage.setItem(KEY, JSON.stringify(data));
+  }
+
+  // restore chat open/close state
+  (function() {
+    var KEY = 'nr-shared-panels';
+    try {
+      var data = JSON.parse(localStorage.getItem(KEY)) || {};
+      if (data.chatOpen === false) {
+        chatOpen = true; // will toggle to false
+        chatWidthBeforeCollapse = data.chatWidthBeforeCollapse || 340;
+        toggleChat();
+      }
+    } catch(e) {}
+  })();
+
+  const essays = {
+    'essay-drug': {
+      title: 'LLM 在药物发现中的应用',
+      content: `# LLM 在药物发现中的应用
+
+## 研究背景
+
+目前药物发现周期长、成本高（约 10 年、$2.6B）。传统方法依赖于高通量筛选和经验驱动的分子优化。近年来 LLM 和生成式 AI 为加速这一流程带来了新的可能性。
+
+## 初步想法
+
+### 1. Transformer 用于分子生成
+- 将 SMILES 字符串视为序列，利用 Transformer 的自回归生成能力
+- 预训练 + 微调范式 → 针对特定靶点的分子生成
+- 关键挑战：化学有效性、可合成性、多样性
+
+### 2. 强化学习优化分子性质
+- 将分子生成建模为序列决策过程
+- 奖励函数综合考虑：亲和力、ADMET、可合成性
+- 可能出现的问题：奖励 hacking、模式坍塌
+
+## 待验证假设
+
+$$\\hat{y} = f_{\\theta}(x_{\\text{mol}})$$
+
+- 假设 1：Transformer 的注意力机制能够捕获分子中远距离原子间的相互作用
+- 假设 2：多任务预训练能提升少样本分子优化性能
+
+## 文献调研线索
+- [标注 p.1: "attention mechanism..."] 来自 Attention Is All You Need
+- MolGPT: 使用 GPT 架构进行分子生成
+- DrugGPT: 结合 RL 的药物设计`
+    },
+    'essay-attn': {
+      title: 'Attention 机制思考',
+      content: `# Attention 机制思考
+
+## 核心洞察
+
+Self-Attention 的本质是一个可学习的加权聚合操作。每个位置的输出是全体输入 Value 的加权和，权重由 Query-Key 相似度决定。
+
+## 计算复杂度分析
+
+| 机制 | 每层复杂度 | 最大路径长度 |
+|------|----------|------------|
+| Self-Attention | O(n²·d) | O(1) |
+| RNN | O(n·d²) | O(n) |
+| CNN | O(k·n·d²) | O(log_k n) |
+
+## 多头注意力的信息瓶颈
+
+每个头可建模的关系维度：d_k = d_model / h
+
+当 h 过大时，单个头的表示能力下降；当 h 过小时，无法捕获多类型关系。
+
+## 优化方向
+- FlashAttention: IO-aware 精确注意力
+- Sparse Attention: 降低序列长度二次方瓶颈
+- Linear Attention: 核函数近似`
+    },
+    'essay-data': {
+      title: '数据增强实验思路',
+      content: `# 数据增强实验思路
+
+## 背景
+
+分子数据获取成本高，少样本场景下生成质量显著下降。数据增强是提升泛化性的关键手段。
+
+## 实验设计
+
+### 方案 A：SMILES 规范化增强
+- 同一分子的多种 SMILES 表示（随机起始原子、不同遍历顺序）
+- 基数：每个分子生成 10 种等价 SMILES
+- 评估指标：Validity、Novelty、Uniqueness
+
+### 方案 B：分子图扰动
+- 随机删除/添加原子（< 5%）
+- 边扰动：随机翻转化学键类型
+- 控制噪声幅度与化学有效性
+
+### 对照实验
+| 组别 | 增强策略 | 训练样本 | 验证指标 |
+|------|---------|---------|---------|
+| 基线 | 无 | 10K | - |
+| A | SMILES增强 | 100K | → |
+| B | 图扰动 | 100K | → |
+| A+B | 联合 | 100K | → |
+`
+    },
+    'essay-rl': {
+      title: 'RL 优化分子性质综述',
+      content: `# RL 优化分子性质综述
+
+## 问题定义
+
+分子优化 → 序列决策过程 (MDP)
+
+- 状态 s_t: 当前分子（SMILES 序列前缀）
+- 动作 a_t: 添加原子/化学键
+- 奖励 r(s_T): 最终分子的综合评分
+
+## 奖励函数设计
+
+### 多目标加权
+
+R(mol) = w₁ · QED(mol) + w₂ · logP(mol) + w₃ · SA_Score(mol) - w₄ · Toxicity(mol)
+
+## 主要方法对比
+
+| 方法 | 范式 | 优势 | 问题 |
+|------|------|------|------|
+| REINVENT | RNN+RL | 成熟稳定 | 模式坍塌 |
+| GCPN | GCN+PPO | 图级优化 | 训练慢 |
+| MolDQN | DQN | 离散动作 | 探索不足 |
+| FREED | GFlowNet | 多样性好 | 调参复杂 |
+
+## 开放问题
+1. 多目标 Pareto 前沿探索
+2. 离线 RL → 利用大规模实验数据
+3. 约束满足：合成可行性约束的硬编码
+`
+    }
+  };
+
+  function switchEssay(row) {
+    document.querySelectorAll('.essay-list-row').forEach(r => r.classList.remove('active'));
+    row.classList.add('active');
+    const key = row.dataset.content;
+    const essay = essays[key];
+    if (!essay) return;
+    document.getElementById('md-editor').value = essay.content;
+    const titleInput = document.querySelector('#editor-col-title .title');
+    titleInput.value = essay.title;
+    const tabTitle = document.querySelector('.tab.active .t-title');
+    if (tabTitle) tabTitle.textContent = essay.title;
+    // Clear chat
+    document.getElementById('chat-messages').innerHTML = '<div class="chat-msg assistant">👋 已切换到「' + essay.title + '」。需要我帮你分析这篇随笔的内容吗？</div>';
+    // Update tag badge
+    const tag = row.dataset.tag || '';
+    const tagBtn = document.querySelector('#editor-col-title .pill-btn');
+    if (tagBtn) tagBtn.textContent = '🏷 ' + tag;
+  }
+
+  function newEssay() {
+    const title = '新随笔 ' + new Date().toLocaleDateString('zh-CN');
+    const key = 'essay-' + Date.now();
+    essays[key] = { title: title, content: '# ' + title + '\n\n开始写作…\n' };
+    const body = document.getElementById('essay-list-body');
+    const row = document.createElement('div');
+    row.className = 'essay-list-row';
+    row.onclick = function() { switchEssay(this); };
+    row.dataset.title = title;
+    row.dataset.content = key;
+    row.dataset.tag = '新建';
+    row.innerHTML = title + '\n<span class="meta">0 字 · <span class="tag">新建</span></span>';
+    body.appendChild(row);
+    switchEssay(row);
+  }
+
+  function sendChat() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+    const container = document.getElementById('chat-messages');
+    container.innerHTML += '<div class="chat-msg user">' + msg + '</div>';
+    input.value = '';
+    setTimeout(() => {
+      const resp = msg.includes('实验')
+        ? '基于你的随笔内容，我建议设计如下实验：\n\n1. <b>基线对比</b>：Transformer vs LSTM/GRU 在分子生成任务上\n2. <b>消融实验</b>：不同注意力头数、层数对生成质量的影响\n3. <b>评估指标</b>：有效性、新颖性、唯一性、QED、SA Score\n\n需要我帮你把这个转化为实验模块的正式方案吗？'
+        : '很好的方向。结合你随笔中提到的 RL 优化思路，我建议补充一段关于<b>多目标优化</b>的讨论——如何在分子生成中同时平衡多个性质（活性、毒性、可合成性）。需要我帮你起草吗？';
+      container.innerHTML += '<div class="chat-msg assistant">' + resp + '</div>';
+      container.scrollTop = container.scrollHeight;
+    }, 700);
+  }
+  function acceptEdit(btn) {
+    const msg = btn.closest('.chat-msg');
+    msg.innerHTML = '<span style="color:var(--success);">✓ 修改已应用到编辑器</span>';
+    // In real app: apply diff to editor content
+    const editor = document.getElementById('md-editor');
+    editor.value = editor.value.replace('### 1. Transformer 用于分子生成\n- 将 SMILES 字符串视为序列，利用 Transformer 的自回归生成能力', '### 1. 基于 Transformer 的分子生成\n\n**技术路线**：将分子 SMILES 视为序列数据，利用 Transformer 自注意力机制捕获原子间长程依赖。\n- 将 SMILES 字符串视为序列，利用 Transformer 的自回归生成能力');
+  }
+  function rejectEdit(btn) {
+    btn.closest('.chat-msg').innerHTML = '<span style="color:var(--muted);">已拒绝此修改。</span>';
+  }
+  function editSuggestion(btn) {
+    btn.closest('.chat-msg').querySelector('.actions').innerHTML += '<span style="font-size:11px;color:var(--muted);"> 微调模式已激活 — 请直接编辑上方 diff 文本。</span>';
+  }
+
+  // resize handles
+  (function() {
+    var KEY = 'nr-shared-panels';
+    var listCol = document.getElementById('essay-list-col');
+    var chatColEl = document.getElementById('essay-chat-col');
+    var hLeft = document.getElementById('handle-essay-left');
+    var hRight = document.getElementById('handle-essay-right');
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e) {}
+    if (saved.sidebar) listCol.style.width = saved.sidebar + 'px';
+    if (saved.detail && saved.chatOpen !== false) chatColEl.style.width = saved.detail + 'px';
+
+    function persist() {
+      var data = {};
+      try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e) {}
+      data.sidebar = listCol.offsetWidth;
+      if (chatOpen) {
+        data.detail = chatColEl.offsetWidth;
+      }
+      data.chatOpen = chatOpen;
+      data.chatWidthBeforeCollapse = chatWidthBeforeCollapse;
+      localStorage.setItem(KEY, JSON.stringify(data));
+    }
+
+    function makeResizable(handle, panel, minW, reverse, otherMinW) {
+      var dragging, startX, startW;
+      var HANDLE_W = 9;
+      handle.addEventListener('mousedown', function(e) {
+        if (!chatOpen && panel === chatColEl) return;
+        dragging = true; startX = e.clientX; startW = panel.offsetWidth;
+        handle.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+      document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        var delta = reverse ? (startX - e.clientX) : (e.clientX - startX);
+        var containerW = panel.parentElement.offsetWidth;
+        var maxW = containerW - otherMinW - HANDLE_W * 2;
+        if (maxW < minW) maxW = minW;
+        var w = Math.max(minW, Math.min(maxW, startW + delta));
+        panel.style.width = w + 'px';
+        panel.style.flex = '0 0 ' + w + 'px';
+        if (panel === chatColEl) chatWidthBeforeCollapse = w;
+      });
+      document.addEventListener('mouseup', function() {
+        if (!dragging) return;
+        dragging = false;
+        handle.classList.remove('active');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        persist();
+      });
+    }
+
+    // otherMinW = min width of the other panels (not the one being dragged)
+    makeResizable(hLeft, listCol, 140, false, 240 + 200);   // left handle: editor(240) + chat(200)
+    makeResizable(hRight, chatColEl, 200, true, 140 + 240);  // right handle: list(140) + editor(240)
+  })();
+
+
+</script>
+</body>
+</html>
