@@ -63,16 +63,19 @@ async function waitForHealthy(baseUrl: string, timeoutMs = 30_000): Promise<void
 
 /** Python 可执行文件路径。
  *  - 开发：server/.venv 下的 python
- *  - 打包：resources/nexus-server（PyInstaller 产物）或系统 python
+ *  - 打包：resources/nexus-server/nexus-server[.exe]（PyInstaller onedir 产物）
  */
 function resolvePythonCommand(): { cmd: string; args: string[]; cwd: string } {
   if (app.isPackaged) {
-    // PyInstaller 产物（Phase 5）：resources/nexus-server[.exe]
+    // PyInstaller onedir 产物：resources/nexus-server/nexus-server[.exe]
     const exeName = process.platform === 'win32' ? 'nexus-server.exe' : 'nexus-server';
-    const exePath = path.join(process.resourcesPath, exeName);
+    const serverDir = path.join(process.resourcesPath, 'nexus-server');
+    const exePath = path.join(serverDir, exeName);
     if (existsSync(exePath)) {
-      return { cmd: exePath, args: [], cwd: process.resourcesPath };
+      // PyInstaller 入口脚本直接监听端口，无需 uvicorn 命令行参数
+      return { cmd: exePath, args: [], cwd: serverDir };
     }
+    console.warn(`[sidecar] packaged nexus-server not found at ${exePath}`);
   }
 
   // 开发：仓库根 server/.venv

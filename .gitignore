@@ -75,10 +75,6 @@ venv/
 *.egg-info/
 *.egg
 .eggs/
-build/
-develop-eggs/
-downloads/
-eggs/
 # lib/ 与前端 shared/lib/ 冲突，改用 server/lib 仅匹配 Python 打包产物
 server/lib/
 lib64/
@@ -87,6 +83,10 @@ sdist/
 wheels/
 share/python-wheels/
 *.whl
+
+# PyInstaller 产物（onedir 模式：~500MB，绝不入库）
+server/build/
+server/dist/
 
 # 测试 / 类型检查 / 覆盖率
 .pytest_cache/

@@ -1,46 +1,70 @@
-# electron-builder 配置 —— Phase 5 打包时使用。
-# 当前 Phase 1 仅作骨架占位，实际打包需配合 PyInstaller 产出 nexus-server。
+# electron-builder 配置 —— Phase 5 完整打包。
+#
+# 前置：需先运行 server/scripts/build-python.{bat,sh} 打包 Python sidecar。
+# 前端构建由 scripts/build.mjs 自动完成。
 
 appId: dev.nexusresearch.app
 productName: NexusResearch
 copyright: Copyright © 2026 NexusResearch
 
 directories:
-  output: dist
+  output: release
   buildResources: resources
 
-# 前端构建产物（@nexus/web build 输出）作为 extraResource 打入
+# 前端构建产物 + Python sidecar 作为 extraResources 打入
+# 运行期可通过 process.resourcesPath 访问
 extraResources:
+  # 前端（@nexus/web build 输出）
   - from: ../web/dist
     to: web
     filter: ['**/*']
+  # Python sidecar（PyInstaller onedir 产物，整个目录）
+  - from: ../../server/dist/nexus-server
+    to: nexus-server
+    filter: ['**/*']
 
-# Python sidecar（PyInstaller 产物，Phase 5 产出）
-# extraFiles:
-#   - from: ../../server/dist/nexus-server
-#     to: nexus-server
-
+# Electron main 进程产物（scripts/compile.mjs 编译的 dist/）
 files:
   - dist/**/*
   - package.json
 
+# ============ Windows ============
 win:
   target:
     - nsis
   artifactName: ${productName}-${version}-${arch}.${ext}
 
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  shortcutName: NexusResearch
+
+# ============ macOS ============
 mac:
   target:
     - dmg
   category: public.app-category.productivity
   artifactName: ${productName}-${version}-${arch}.${ext}
+  # 签名（开发期留空，发布时填）
+  # identity: null
+  # hardenedRuntime: true
 
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# ============ Linux ============
 linux:
   target:
     - AppImage
   category: Office
   artifactName: ${productName}-${version}-${arch}.${ext}
 
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
+AppImage:
+  license: null
