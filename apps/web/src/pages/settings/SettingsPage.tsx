@@ -1,15 +1,26 @@
-/** 设置页面 — 1:1 还原原始 HTML */
-import { useState, useMemo } from 'react';
+/** 设置页面 — 模型与 API 区接入真实后端（其余区保留 mock） */
+import { useState, useMemo, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { SettingsNavSection } from 'shared/types';
+import { useProviderStore } from 'features/provider/model/providerStore';
 
-const PROVIDERS = [
-  { id: 'anthropic', icon: '🟣', name: 'Anthropic', desc: 'Claude 系列 — 长上下文、强推理', status: 'active', models: ['Claude 4 Opus', 'Claude 4 Sonnet', 'Claude 3.5 Haiku'] },
-  { id: 'openai', icon: '🟢', name: 'OpenAI', desc: 'GPT-4o / o1 / o3 系列', status: 'active', models: ['GPT-4o', 'o3', 'o4-mini'] },
-  { id: 'google', icon: '🔵', name: 'Google AI', desc: 'Gemini 2.5 Pro / Flash', status: 'inactive', models: ['Gemini 2.5 Pro', 'Gemini 2.5 Flash'] },
-  { id: 'deepseek', icon: '🟡', name: 'DeepSeek', desc: 'DeepSeek-V3 / R1 — 高性价比推理', status: 'active', models: ['DeepSeek-V3', 'DeepSeek-R1'] },
-  { id: 'moonshot', icon: '🌙', name: 'Moonshot/Kimi', desc: 'moonshot-v1-128k', status: 'inactive', models: ['moonshot-v1-128k'] },
-];
+/** 已知 Provider 的静态元数据（图标/描述），与后端配置合并显示 */
+const PROVIDER_META: Record<string, { icon: string; desc: string }> = {
+  anthropic: { icon: '🟣', desc: 'Claude 系列 — 长上下文、强推理' },
+  openai: { icon: '🟢', desc: 'GPT-4o / o1 / o3 系列' },
+  google: { icon: '🔵', desc: 'Gemini 2.5 Pro / Flash' },
+  deepseek: { icon: '🟡', desc: 'DeepSeek-V3 / R1 — 高性价比推理' },
+  moonshot: { icon: '🌙', desc: 'Moonshot/Kimi — moonshot-v1-128k' },
+  custom: { icon: '🔧', desc: '自定义 OpenAI 兼容服务' },
+};
+
+/** 模块中文标签 */
+const MODULE_LABELS: Record<string, string> = {
+  literature: '文献管理',
+  reader: '文献阅读',
+  essay: '随笔',
+  paper: '论文写作',
+};
 
 /** 模拟用量数据 */
 const USAGE_DATA = {
@@ -67,10 +78,35 @@ const USAGE_DATA = {
 
 export function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SettingsNavSection>('models-api');
-  const [selectedProvider, setSelectedProvider] = useState('anthropic');
+  const [selectedProvider, setSelectedProvider] = useState('');
   const [proxyEnabled, setProxyEnabled] = useState(false);
   const [usageModel, setUsageModel] = useState<string>('all');
   const [timePeriod, setTimePeriod] = useState<'weekly' | 'monthly'>('weekly');
+
+  // Provider store
+  const { providers, assignments, loading, testing, fetchAll, upsert, test, setAssignment } = useProviderStore();
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [testResult, setTestResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  // 合并后端 provider 与静态元数据
+  const displayProviders = providers.length > 0
+    ? providers.map((p) => ({
+        ...p,
+        icon: PROVIDER_META[p.id]?.icon ?? p.icon ?? '🔧',
+        desc: p.description || PROVIDER_META[p.id]?.desc || '',
+      }))
+    : Object.entries(PROVIDER_META).map(([id, meta]) => ({
+        id,
+        name: id.charAt(0).toUpperCase() + id.slice(1),
+        icon: meta.icon,
+        desc: meta.desc,
+        connectionStatus: 'not-configured',
+        apiKeyConfigured: false,
+      }));
 
   const periodData = timePeriod === 'weekly' ? USAGE_DATA.weekly : USAGE_DATA.monthly;
   const selectedModelData = USAGE_DATA.models.find((m) => m.name === usageModel);
@@ -200,9 +236,18 @@ export function SettingsPage() {
                   <div className="settings-card-title">API 提供商</div>
                   <div className="settings-card-desc">选择一个作为默认提供商。支持自定义添加兼容 OpenAI 接口的服务商。</div>
                 </div>
-                <button className="btn-sm primary">+ 添加提供商</button>
+                <button
+                  className="btn-sm primary"
+                  onClick={() => {
+                    const id = prompt('输入 Provider ID（如 myapi）:');
+                    if (id) upsert(id, { name: id, baseUrl: '', compatibilityType: 'openai' });
+                  }}
+                >
+                  + 添加提供商
+                </button>
               </div>
-              {PROVIDERS.map((p) => (
+              {loading && <div style={{ padding: 16, color: 'var(--text-tertiary)' }}>加载中…</div>}
+              {displayProviders.map((p) => (
                 <div
                   key={p.id}
                   className={`provider-row${selectedProvider === p.id ? ' selected' : ''}`}
@@ -214,37 +259,97 @@ export function SettingsPage() {
                     <div className="provider-name">{p.name}</div>
                     <div className="provider-desc">{p.desc}</div>
                   </div>
-                  <div className={`provider-status ${p.status}`}>{p.status === 'active' ? '已连接' : '未配置'}</div>
+                  <div className={`provider-status ${p.connectionStatus === 'connected' ? 'active' : ''}`}>
+                    {p.connectionStatus === 'connected' ? '已连接' : p.apiKeyConfigured ? '未验证' : '未配置'}
+                  </div>
                 </div>
               ))}
             </div>
 
             <div className="settings-card">
-              <div className="settings-card-title">API Key</div>
-              <div className="api-key-row">
-                <input className="api-key-input" type="password" placeholder="sk-ant-api…x8Q2" />
-                <button className="btn-sm">验证</button>
-                <button className="btn-sm primary">添加</button>
+              <div className="settings-card-title">
+                API Key{selectedProvider ? ` — ${selectedProvider}` : ''}
               </div>
+              <div className="api-key-row">
+                <input
+                  className="api-key-input"
+                  type="password"
+                  placeholder={selectedProvider ? '粘贴 API Key...' : '请先选择上方的提供商'}
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  disabled={!selectedProvider}
+                />
+                <button
+                  className="btn-sm"
+                  disabled={!selectedProvider || testing === selectedProvider}
+                  onClick={async () => {
+                    if (!selectedProvider) return;
+                    if (apiKeyInput) {
+                      await upsert(selectedProvider, {
+                        name: selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1),
+                        baseUrl: '',
+                        apiKey: apiKeyInput,
+                        compatibilityType: 'openai',
+                        isDefault: true,
+                      });
+                      setApiKeyInput('');
+                    }
+                    const r = await test(selectedProvider);
+                    setTestResult(r.success ? `✓ 连通成功（${r.latency}ms）` : `✗ ${r.error}`);
+                  }}
+                >
+                  {testing === selectedProvider ? '测试中…' : '验证'}
+                </button>
+                <button
+                  className="btn-sm primary"
+                  disabled={!selectedProvider || !apiKeyInput}
+                  onClick={async () => {
+                    if (!selectedProvider || !apiKeyInput) return;
+                    await upsert(selectedProvider, {
+                      name: selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1),
+                      baseUrl: '',
+                      apiKey: apiKeyInput,
+                      compatibilityType: 'openai',
+                      isDefault: true,
+                    });
+                    setApiKeyInput('');
+                    setTestResult('✓ 已保存');
+                  }}
+                >
+                  保存
+                </button>
+              </div>
+              {testResult && <div style={{ padding: '8px 0', fontSize: 12, color: testResult.startsWith('✓') ? 'var(--success)' : 'var(--danger)' }}>{testResult}</div>}
             </div>
 
             <div className="settings-card">
               <div className="settings-card-title">模块模型分配</div>
               <table className="settings-table">
                 <thead>
-                  <tr><th>模块</th><th>模型</th></tr>
+                  <tr><th>模块</th><th>模型（providerId:modelName）</th></tr>
                 </thead>
                 <tbody>
-                  {['文献管理', '文献阅读', '随笔', '论文写作'].map((mod) => (
-                    <tr key={mod}>
-                      <td>{mod}</td>
-                      <td>
-                        <select className="sel" defaultValue="Claude 4 Opus">
-                          {PROVIDERS.flatMap((p) => p.models).map((m) => <option key={m}>{m}</option>)}
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
+                  {Object.entries(MODULE_LABELS).map(([mod, label]) => {
+                    const current = assignments.find((a) => a.module === mod);
+                    return (
+                      <tr key={mod}>
+                        <td>{label}</td>
+                        <td>
+                          <input
+                            className="api-key-input"
+                            style={{ width: '100%' }}
+                            defaultValue={current?.modelId ?? ''}
+                            placeholder="providerId:modelName（如 deepseek:deepseek-chat）"
+                            onBlur={(e) => {
+                              if (e.target.value && e.target.value !== current?.modelId) {
+                                setAssignment(mod, e.target.value);
+                              }
+                            }}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

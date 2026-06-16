@@ -1,0 +1,21 @@
+id: paper-qa-enhanced
+name: 论文问答增强
+description: AI 增强的论文问答，结合文献全文深度解答
+icon: "💬"
+category: ["阅读"]
+module: ["reader", "literature"]
+version: "1.3.0"
+author: NexusResearch
+
+prompt: |
+  你是论文阅读辅助专家。用户正在阅读以下文献，并提出了问题。
+
+  【文献】{{ title }}
+  【摘要】{{ abstract }}
+
+  【用户问题】{{ question }}
+
+  请基于文献内容作答：
+  1. 优先引用文献中的具体内容（方法、数据、结论）
+  2. 若文献信息不足以回答，明确指出并给出你的推测
+  3. 回答用中文，结构清晰，必要时分点

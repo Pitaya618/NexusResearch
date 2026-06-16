@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import ai, essay, literature, system
+from app.api import ai, essay, literature, provider, skill, system
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import get_logger, setup_logging
@@ -25,6 +25,10 @@ async def lifespan(_: FastAPI):
     """应用生命周期：启动时初始化数据库，关闭时释放引擎。"""
     logger.info("app_starting", app=settings.app_name, version=settings.version)
     await init_db()
+    # 加载 Skills 注册表
+    from app.services.skills.registry import registry
+
+    registry.load_all()
     logger.info("app_ready", host=settings.host, port=settings.port)
     yield
     from app.db.session import engine
@@ -60,6 +64,8 @@ app.include_router(system.router, prefix=api_prefix)
 app.include_router(literature.router, prefix=api_prefix)
 app.include_router(essay.router, prefix=api_prefix)
 app.include_router(ai.router, prefix=api_prefix)
+app.include_router(provider.router, prefix=api_prefix)
+app.include_router(skill.router, prefix=api_prefix)
 
 
 @app.get("/")

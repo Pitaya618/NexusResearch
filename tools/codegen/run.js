@@ -245,6 +245,10 @@ const INTEGER_FIELDS = new Set([
   "paperCount",
 ]);
 
+// 这些字段虽是整数，但语义上允许为空（DB 可 NULL / 前端可选）。
+// 后处理时改为 `int | None`，避免 None 校验失败。
+const NULLABLE_INTEGER_FIELDS = new Set(["year"]);
+
 function fixIntegerFields(filePath) {
   let content = readFileSync(filePath, "utf-8");
   // 统一换行为 LF，避免 CRLF 干扰正则匹配
@@ -259,7 +263,14 @@ function fixIntegerFields(filePath) {
     if (m) {
       const [, indent, fieldName, rest] = m;
       if (INTEGER_FIELDS.has(fieldName)) {
-        lines[i] = `${indent}${fieldName}: int${rest.replace(/\bfloat\b/g, "int")}`;
+        // 可空整数字段：若原本不是 `| None`，但属于可空集合，则加 `| None`
+        const nullable = NULLABLE_INTEGER_FIELDS.has(fieldName);
+        const isAlreadyOptional = rest.includes("| None") || rest.includes("Optional");
+        if (nullable && !isAlreadyOptional) {
+          lines[i] = `${indent}${fieldName}: int | None = None`;
+        } else {
+          lines[i] = `${indent}${fieldName}: int${rest.replace(/\bfloat\b/g, "int")}`;
+        }
         changed++;
       }
     }

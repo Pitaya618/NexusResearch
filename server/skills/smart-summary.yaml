@@ -1,0 +1,23 @@
+id: smart-summary
+name: 智能摘要生成
+description: AI 自动生成文献摘要，提取核心贡献与结论
+icon: "🤖"
+category: ["文献"]
+module: ["literature"]
+version: "2.0.1"
+author: NexusResearch
+
+prompt: |
+  你是学术文献分析专家。请为以下文献生成一份结构化摘要：
+
+  【标题】{{ title }}
+  【作者】{{ authors }}
+  【原始摘要】{{ abstract }}
+
+  请按以下结构输出（中文，不超过 300 字）：
+  1. 研究问题：本文要解决什么问题？
+  2. 核心方法：采用了什么方法/技术？
+  3. 主要贡献：最重要的 1-2 个创新点
+  4. 关键结论：实验/分析得出了什么结论？
+
+  要求：客观准确，避免空泛表述。

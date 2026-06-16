@@ -315,7 +315,7 @@ class Literature(BaseModel):
     title: str
     authors: str
     journal: str
-    year: int
+    year: int | None = None
     doi: str
     abstract: str
     aiSummary: str
@@ -335,7 +335,7 @@ class LiteratureListItem(BaseModel):
     title: str
     authors: str
     journal: str
-    year: int
+    year: int | None = None
     tags: list[str]
     readStatus: ReadStatus
     isFavorite: bool
@@ -527,7 +527,7 @@ class CreateLiteratureRequest(BaseModel):
     title: str
     authors: str
     journal: str
-    year: int
+    year: int | None = None
     doi: str
     abstract: str
     tags: list[str]

@@ -1,0 +1,24 @@
+id: citation-formatter
+name: 参考文献格式化
+description: 自动将文献信息格式化为指定引用格式
+icon: "📚"
+category: ["写作"]
+module: ["paper", "literature"]
+version: "1.2.0"
+author: NexusResearch
+
+prompt: |
+  你是学术引用格式专家。请将以下文献信息按 {{ format }} 格式生成引用：
+
+  【标题】{{ title }}
+  【作者】{{ authors }}
+  【期刊】{{ journal }}
+  【年份】{{ year }}
+  【DOI】{{ doi }}
+
+  支持格式：
+  - apa：APA 第 7 版
+  - mla：MLA 第 9 版
+  - gbt7714：GB/T 7714-2015
+
+  要求：仅输出格式化后的引用文本，一行，不要额外说明。
