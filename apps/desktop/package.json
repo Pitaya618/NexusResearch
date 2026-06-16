@@ -8,7 +8,7 @@
     "dev": "node scripts/dev.mjs",
     "compile": "node scripts/compile.mjs",
     "build": "node scripts/build.mjs",
-    "package": "node scripts/build.mjs && electron-builder",
+    "package": "node scripts/build.mjs && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.12.3",
+    "cross-env": "^10.1.0",
     "electron": "^33.2.0",
     "electron-builder": "^25.1.8",
     "esbuild": "^0.25.0",

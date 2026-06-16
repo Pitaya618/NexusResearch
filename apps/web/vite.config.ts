@@ -5,6 +5,8 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Electron 打包后使用 file:// 协议加载，需要相对路径
+  base: './',
   resolve: {
     alias: {
       app: path.resolve(__dirname, 'src/app'),
