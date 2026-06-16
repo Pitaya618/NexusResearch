@@ -22,10 +22,10 @@
     "codegen": "pnpm --filter @nexus/codegen run gen",
     "codegen:schema": "pnpm --filter @nexus/codegen run schema",
     "codegen:py": "pnpm --filter @nexus/codegen run py",
-    "dev:server": "cd server && set NEXUS_DEV=1 && .venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --port 8000",
+    "dev:server": "cd server && .venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --port 8000",
     "build:python": "cd server && scripts\\build-python.bat",
     "build:desktop": "pnpm --filter @nexus/desktop run build",
-    "package": "cd apps\\desktop && pnpm package"
+    "package": "pnpm --filter @nexus/desktop run package"
   },
   "packageManager": "pnpm@10.32.1"
 }
