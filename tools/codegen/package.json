@@ -1,0 +1,15 @@
+{
+  "name": "@nexus/codegen",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "NexusResearch 类型代码生成：TS → JSON Schema → Pydantic",
+  "scripts": {
+    "schema": "node run.js schema",
+    "py": "node run.js py",
+    "gen": "node run.js all"
+  },
+  "dependencies": {
+    "ts-json-schema-generator": "^1.5.0"
+  }
+}

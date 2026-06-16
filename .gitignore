@@ -52,3 +52,69 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+# ---------- Monorepo ----------
+# pnpm
+.pnpm-store/
+
+# ---------- Python (server/) ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+server/.venv/
+server/venv/
+server/env/
+ENV/
+env/
+.venv/
+venv/
+
+# Python 打包产物
+*.egg-info/
+*.egg
+.eggs/
+build/
+develop-eggs/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+wheels/
+share/python-wheels/
+*.whl
+
+# 测试 / 类型检查 / 覆盖率
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+
+# 后端运行期数据（绝不入库）
+server/.data/
+server/.env
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# ---------- Electron (apps/desktop/) ----------
+apps/desktop/out/
+apps/desktop/dist/
+apps/desktop/release/
+release/
+
+# ---------- 代码生成产物 ----------
+# Pydantic 生成代码：由 codegen 管线产出，但入库以便审查
+# （取消注释下行则完全忽略生成产物）
+# server/app/models/_generated/
+tools/codegen/dist/

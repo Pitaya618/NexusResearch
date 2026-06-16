@@ -1,0 +1,1564 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://nexusresearch.dev/types.json",
+  "title": "NexusResearch",
+  "description": "Shared types (TS single source of truth) → Pydantic via codegen",
+  "definitions": {
+    "Literature": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number"
+        },
+        "title": {
+          "type": "string"
+        },
+        "authors": {
+          "type": "string"
+        },
+        "journal": {
+          "type": "string"
+        },
+        "year": {
+          "type": "number"
+        },
+        "doi": {
+          "type": "string"
+        },
+        "abstract": {
+          "type": "string"
+        },
+        "aiSummary": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isFavorite": {
+          "type": "boolean"
+        },
+        "readStatus": {
+          "$ref": "#/definitions/ReadStatus"
+        },
+        "pdfUrl": {
+          "type": "string"
+        },
+        "filePath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "authors",
+        "journal",
+        "year",
+        "doi",
+        "abstract",
+        "aiSummary",
+        "tags",
+        "isFavorite",
+        "readStatus"
+      ],
+      "additionalProperties": false,
+      "description": "文献实体"
+    },
+    "LiteratureListItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "abstractPreview": {
+          "type": "string"
+        },
+        "id": {
+          "type": "number"
+        },
+        "title": {
+          "type": "string"
+        },
+        "authors": {
+          "type": "string"
+        },
+        "journal": {
+          "type": "string"
+        },
+        "year": {
+          "type": "number"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "readStatus": {
+          "$ref": "#/definitions/ReadStatus"
+        },
+        "isFavorite": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "abstractPreview",
+        "authors",
+        "id",
+        "isFavorite",
+        "journal",
+        "readStatus",
+        "tags",
+        "title",
+        "year"
+      ],
+      "description": "文献列表项（摘要视图用）"
+    },
+    "Collection": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "count": {
+          "type": "number"
+        },
+        "isSystem": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "icon",
+        "count",
+        "isSystem"
+      ],
+      "additionalProperties": false,
+      "description": "收藏夹"
+    },
+    "Tag": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "$ref": "#/definitions/OklchColor"
+        },
+        "count": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "color",
+        "count"
+      ],
+      "additionalProperties": false,
+      "description": "标签"
+    },
+    "Annotation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/AnnotationType"
+        },
+        "color": {
+          "$ref": "#/definitions/HighlightColor"
+        },
+        "page": {
+          "type": "number"
+        },
+        "quotedText": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "createdAt": {
+          "$ref": "#/definitions/ISODateString"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "color",
+        "page",
+        "quotedText",
+        "note",
+        "createdAt"
+      ],
+      "additionalProperties": false,
+      "description": "批注"
+    },
+    "ReadingNote": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "literatureId": {
+          "type": "number"
+        },
+        "content": {
+          "type": "string"
+        },
+        "template": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/NoteTemplate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "createdAt": {
+          "$ref": "#/definitions/ISODateString"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/ISODateString"
+        }
+      },
+      "required": [
+        "id",
+        "literatureId",
+        "content",
+        "template",
+        "createdAt",
+        "updatedAt"
+      ],
+      "additionalProperties": false,
+      "description": "阅读笔记"
+    },
+    "ChatMessage": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/ChatRole"
+        },
+        "content": {
+          "type": "string"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/ISODateString"
+        }
+      },
+      "required": [
+        "id",
+        "role",
+        "content",
+        "timestamp"
+      ],
+      "additionalProperties": false,
+      "description": "聊天消息"
+    },
+    "Essay": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "tag": {
+          "$ref": "#/definitions/EssayTag"
+        },
+        "wordCount": {
+          "type": "number"
+        },
+        "createdAt": {
+          "$ref": "#/definitions/ISODateString"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/ISODateString"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "content",
+        "tag",
+        "wordCount",
+        "createdAt",
+        "updatedAt"
+      ],
+      "additionalProperties": false,
+      "description": "随笔"
+    },
+    "AiEditSuggestion": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DiffSegment"
+          }
+        },
+        "accepted": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "segments",
+        "accepted"
+      ],
+      "additionalProperties": false,
+      "description": "AI 编辑建议"
+    },
+    "DiffSegment": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "addition",
+            "deletion",
+            "unchanged"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "additionalProperties": false,
+      "description": "差异片段"
+    },
+    "PaperProject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "fileTree": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FileNode"
+          }
+        },
+        "template": {
+          "$ref": "#/definitions/LatexTemplate"
+        },
+        "compileResult": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CompileResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "activeFile": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "createdAt": {
+          "$ref": "#/definitions/ISODateString"
+        },
+        "updatedAt": {
+          "$ref": "#/definitions/ISODateString"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "fileTree",
+        "template",
+        "compileResult",
+        "activeFile",
+        "createdAt",
+        "updatedAt"
+      ],
+      "additionalProperties": false,
+      "description": "论文项目"
+    },
+    "FileNode": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/FileType"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FileNode"
+          }
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "文件节点（递归树结构）"
+    },
+    "CompileResult": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/CompileStatus"
+        },
+        "pages": {
+          "type": "number"
+        },
+        "fileSize": {
+          "type": "string"
+        },
+        "logEntries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CompileLogEntry"
+          }
+        },
+        "errorCount": {
+          "type": "number"
+        },
+        "warningCount": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "status",
+        "pages",
+        "fileSize",
+        "logEntries",
+        "errorCount",
+        "warningCount"
+      ],
+      "additionalProperties": false,
+      "description": "编译结果"
+    },
+    "CompileLogEntry": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warn",
+            "error",
+            "success"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/ISODateString"
+        }
+      },
+      "required": [
+        "level",
+        "message",
+        "timestamp"
+      ],
+      "additionalProperties": false,
+      "description": "编译日志条目"
+    },
+    "Skill": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "category": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SkillCategory"
+          }
+        },
+        "module": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SkillModule"
+          }
+        },
+        "status": {
+          "$ref": "#/definitions/SkillStatus"
+        },
+        "version": {
+          "type": "string"
+        },
+        "latestVersion": {
+          "type": "string"
+        },
+        "updateDescription": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "icon",
+        "category",
+        "module",
+        "status",
+        "version"
+      ],
+      "additionalProperties": false,
+      "description": "技能"
+    },
+    "InstalledSkill": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stats": {
+          "$ref": "#/definitions/SkillStats"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "category": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SkillCategory"
+          }
+        },
+        "module": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SkillModule"
+          }
+        },
+        "status": {
+          "$ref": "#/definitions/SkillStatus"
+        },
+        "version": {
+          "type": "string"
+        },
+        "latestVersion": {
+          "type": "string"
+        },
+        "updateDescription": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "description",
+        "icon",
+        "id",
+        "module",
+        "name",
+        "stats",
+        "status",
+        "version"
+      ],
+      "description": "已安装技能"
+    },
+    "SkillStats": {
+      "type": "object",
+      "properties": {
+        "skillId": {
+          "type": "string"
+        },
+        "usageCount": {
+          "type": "number"
+        },
+        "lastUsedAt": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ISODateString"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "running",
+            "paused"
+          ]
+        }
+      },
+      "required": [
+        "skillId",
+        "usageCount",
+        "lastUsedAt",
+        "status"
+      ],
+      "additionalProperties": false,
+      "description": "技能统计"
+    },
+    "Provider": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "baseUrl": {
+          "type": "string"
+        },
+        "apiKey": {
+          "type": "string"
+        },
+        "compatibilityType": {
+          "$ref": "#/definitions/CompatibilityType"
+        },
+        "connectionStatus": {
+          "$ref": "#/definitions/ConnectionStatus"
+        },
+        "isDefault": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "icon",
+        "description",
+        "baseUrl",
+        "apiKey",
+        "compatibilityType",
+        "connectionStatus",
+        "isDefault"
+      ],
+      "additionalProperties": false,
+      "description": "API 提供商"
+    },
+    "ModelInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "meta": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isHot": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "meta",
+        "tags",
+        "isHot"
+      ],
+      "additionalProperties": false,
+      "description": "模型信息"
+    },
+    "ModuleModelAssignment": {
+      "type": "object",
+      "properties": {
+        "module": {
+          "$ref": "#/definitions/ModuleType"
+        },
+        "modelId": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "module",
+        "modelId",
+        "purpose"
+      ],
+      "additionalProperties": false,
+      "description": "模块模型分配"
+    },
+    "ProxyConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "type": {
+          "$ref": "#/definitions/ProxyType"
+        },
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "type": "number"
+        },
+        "auth": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled",
+        "type",
+        "host",
+        "port",
+        "auth"
+      ],
+      "additionalProperties": false,
+      "description": "代理配置"
+    },
+    "StorageInfo": {
+      "type": "object",
+      "properties": {
+        "used": {
+          "type": "string"
+        },
+        "available": {
+          "type": "string"
+        },
+        "breakdown": {
+          "$ref": "#/definitions/StorageBreakdown"
+        },
+        "dataPath": {
+          "type": "string"
+        },
+        "literatureCount": {
+          "type": "number"
+        },
+        "essayCount": {
+          "type": "number"
+        },
+        "paperCount": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "used",
+        "available",
+        "breakdown",
+        "dataPath",
+        "literatureCount",
+        "essayCount",
+        "paperCount"
+      ],
+      "additionalProperties": false,
+      "description": "存储信息"
+    },
+    "StorageBreakdown": {
+      "type": "object",
+      "properties": {
+        "literature": {
+          "type": "number"
+        },
+        "essays": {
+          "type": "number"
+        },
+        "papers": {
+          "type": "number"
+        },
+        "cache": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "GB",
+            "MB"
+          ]
+        }
+      },
+      "required": [
+        "literature",
+        "essays",
+        "papers",
+        "cache",
+        "unit"
+      ],
+      "additionalProperties": false,
+      "description": "存储用量明细"
+    },
+    "LiteratureListRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "number"
+        },
+        "pageSize": {
+          "type": "number"
+        },
+        "sort": {
+          "$ref": "#/definitions/SortConfig%3Cunknown%3E"
+        },
+        "search": {
+          "type": "string"
+        },
+        "collectionId": {
+          "type": "string"
+        },
+        "tagIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "readStatus": {
+          "$ref": "#/definitions/ReadStatus"
+        },
+        "isFavorite": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "page",
+        "pageSize"
+      ],
+      "description": "文献列表请求"
+    },
+    "LiteratureListResponse": {
+      "$ref": "#/definitions/PaginatedResponse%3CLiteratureListItem%3E",
+      "description": "文献列表响应"
+    },
+    "CreateLiteratureRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "importSource": {
+          "type": "string",
+          "enum": [
+            "doi",
+            "pdf",
+            "bibtex",
+            "manual"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "authors": {
+          "type": "string"
+        },
+        "journal": {
+          "type": "string"
+        },
+        "year": {
+          "type": "number"
+        },
+        "doi": {
+          "type": "string"
+        },
+        "abstract": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isFavorite": {
+          "type": "boolean"
+        },
+        "readStatus": {
+          "$ref": "#/definitions/ReadStatus"
+        },
+        "pdfUrl": {
+          "type": "string"
+        },
+        "filePath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "abstract",
+        "authors",
+        "doi",
+        "isFavorite",
+        "journal",
+        "readStatus",
+        "tags",
+        "title",
+        "year"
+      ],
+      "description": "创建文献请求"
+    },
+    "UpdateLiteratureRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "number"
+        },
+        "title": {
+          "type": "string"
+        },
+        "authors": {
+          "type": "string"
+        },
+        "journal": {
+          "type": "string"
+        },
+        "year": {
+          "type": "number"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isFavorite": {
+          "type": "boolean"
+        },
+        "readStatus": {
+          "$ref": "#/definitions/ReadStatus"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "description": "更新文献请求"
+    },
+    "DeleteLiteratureRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false,
+      "description": "删除文献请求"
+    },
+    "BulkLiteratureAction": {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "delete",
+            "markAsRead",
+            "markAsUnread",
+            "addTag",
+            "removeTag",
+            "addFavorite",
+            "removeFavorite"
+          ]
+        },
+        "payload": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ids",
+        "action"
+      ],
+      "additionalProperties": false,
+      "description": "批量文献操作"
+    },
+    "GenerateSummaryRequest": {
+      "type": "object",
+      "properties": {
+        "literatureId": {
+          "type": "number"
+        },
+        "modelId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "literatureId"
+      ],
+      "additionalProperties": false,
+      "description": "生成摘要请求"
+    },
+    "GenerateSummaryResponse": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "modelUsed": {
+          "type": "string"
+        },
+        "tokensUsed": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "summary",
+        "modelUsed",
+        "tokensUsed"
+      ],
+      "additionalProperties": false,
+      "description": "生成摘要响应"
+    },
+    "GenerateCitationRequest": {
+      "type": "object",
+      "properties": {
+        "literatureId": {
+          "type": "number"
+        },
+        "format": {
+          "$ref": "#/definitions/CitationFormat"
+        }
+      },
+      "required": [
+        "literatureId",
+        "format"
+      ],
+      "additionalProperties": false,
+      "description": "生成引用请求"
+    },
+    "EssayListRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "number"
+        },
+        "pageSize": {
+          "type": "number"
+        },
+        "sort": {
+          "$ref": "#/definitions/SortConfig%3Cunknown%3E"
+        },
+        "search": {
+          "type": "string"
+        },
+        "tag": {
+          "$ref": "#/definitions/EssayTag"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "page",
+        "pageSize"
+      ],
+      "description": "随笔列表请求"
+    },
+    "EssayListResponse": {
+      "$ref": "#/definitions/PaginatedResponse%3CEssay%3E",
+      "description": "随笔列表响应"
+    },
+    "CreateEssayRequest": {
+      "$ref": "#/definitions/Omit%3CEssay%2C(%22id%22%7C%22createdAt%22%7C%22updatedAt%22)%3E",
+      "description": "创建随笔请求"
+    },
+    "UpdateEssayRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "tag": {
+          "$ref": "#/definitions/EssayTag"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "description": "更新随笔请求"
+    },
+    "AiContext": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "literature"
+            },
+            "literatureId": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "literatureId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "essay"
+            },
+            "essayId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "essayId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "paper"
+            },
+            "projectId": {
+              "type": "string"
+            },
+            "activeFile": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "projectId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "reader"
+            },
+            "literatureId": {
+              "type": "number"
+            },
+            "currentPage": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "literatureId",
+            "currentPage"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "AI 上下文 - 可辨识联合类型"
+    },
+    "AiChatRequest": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ChatMessage"
+          }
+        },
+        "context": {
+          "$ref": "#/definitions/AiContext"
+        },
+        "modelId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "messages",
+        "context"
+      ],
+      "additionalProperties": false,
+      "description": "AI 聊天请求"
+    },
+    "AiChatResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "$ref": "#/definitions/ChatMessage"
+        },
+        "modelUsed": {
+          "type": "string"
+        },
+        "tokensUsed": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "message",
+        "modelUsed",
+        "tokensUsed"
+      ],
+      "additionalProperties": false,
+      "description": "AI 聊天响应"
+    },
+    "AiEditSuggestionResponse": {
+      "type": "object",
+      "properties": {
+        "suggestion": {
+          "$ref": "#/definitions/AiEditSuggestion"
+        },
+        "modelUsed": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "suggestion",
+        "modelUsed"
+      ],
+      "additionalProperties": false,
+      "description": "AI 编辑建议响应"
+    },
+    "ApplyEditRequest": {
+      "type": "object",
+      "properties": {
+        "suggestionId": {
+          "type": "string"
+        },
+        "action": {
+          "$ref": "#/definitions/DiffAction"
+        },
+        "essayId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "suggestionId",
+        "action",
+        "essayId"
+      ],
+      "additionalProperties": false,
+      "description": "应用编辑请求"
+    },
+    "PaperCompileRequest": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string"
+        },
+        "template": {
+          "$ref": "#/definitions/LatexTemplate"
+        }
+      },
+      "required": [
+        "projectId",
+        "template"
+      ],
+      "additionalProperties": false,
+      "description": "论文编译请求"
+    },
+    "PaperCompileResponse": {
+      "$ref": "#/definitions/CompileResult",
+      "description": "论文编译响应"
+    },
+    "PaperPolishRequest": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string"
+        },
+        "selectedText": {
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/definitions/PolishMode"
+        },
+        "modelId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "projectId",
+        "selectedText",
+        "mode"
+      ],
+      "additionalProperties": false,
+      "description": "论文润色请求"
+    },
+    "PaperPolishResponse": {
+      "type": "object",
+      "properties": {
+        "originalText": {
+          "type": "string"
+        },
+        "polishedText": {
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/definitions/PolishMode"
+        }
+      },
+      "required": [
+        "originalText",
+        "polishedText",
+        "mode"
+      ],
+      "additionalProperties": false,
+      "description": "论文润色响应"
+    },
+    "ProviderTestRequest": {
+      "type": "object",
+      "properties": {
+        "providerId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "providerId"
+      ],
+      "additionalProperties": false,
+      "description": "提供商测试请求"
+    },
+    "ProviderTestResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "latency": {
+          "type": "number"
+        },
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "success",
+        "latency"
+      ],
+      "additionalProperties": false,
+      "description": "提供商测试响应"
+    },
+    "FetchModelsRequest": {
+      "type": "object",
+      "properties": {
+        "providerId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "providerId"
+      ],
+      "additionalProperties": false,
+      "description": "获取模型列表请求"
+    },
+    "FetchModelsResponse": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ModelInfo"
+          }
+        },
+        "providerId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "models",
+        "providerId"
+      ],
+      "additionalProperties": false,
+      "description": "获取模型列表响应"
+    },
+    "SkillListRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "number"
+        },
+        "pageSize": {
+          "type": "number"
+        },
+        "sort": {
+          "$ref": "#/definitions/SortConfig%3Cunknown%3E"
+        },
+        "search": {
+          "type": "string"
+        },
+        "category": {
+          "$ref": "#/definitions/SkillCategory"
+        },
+        "module": {
+          "$ref": "#/definitions/SkillModule"
+        },
+        "status": {
+          "$ref": "#/definitions/SkillStatus"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "page",
+        "pageSize"
+      ],
+      "description": "技能列表请求"
+    },
+    "SkillListResponse": {
+      "$ref": "#/definitions/PaginatedResponse%3CSkill%3E",
+      "description": "技能列表响应"
+    },
+    "InstallSkillRequest": {
+      "type": "object",
+      "properties": {
+        "skillId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "skillId"
+      ],
+      "additionalProperties": false,
+      "description": "安装技能请求"
+    },
+    "UpdateSkillRequest": {
+      "type": "object",
+      "properties": {
+        "skillId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "skillId"
+      ],
+      "additionalProperties": false,
+      "description": "更新技能请求"
+    },
+    "ConnectionTestResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "latency": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "success",
+        "message"
+      ],
+      "additionalProperties": false,
+      "description": "连接测试响应"
+    },
+    "ImportDataResponse": {
+      "type": "object",
+      "properties": {
+        "imported": {
+          "type": "object",
+          "properties": {
+            "literature": {
+              "type": "number"
+            },
+            "essays": {
+              "type": "number"
+            },
+            "papers": {
+              "type": "number"
+            },
+            "settings": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "literature",
+            "essays",
+            "papers",
+            "settings"
+          ],
+          "additionalProperties": false
+        },
+        "skipped": {
+          "type": "number"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "imported",
+        "skipped",
+        "errors"
+      ],
+      "additionalProperties": false,
+      "description": "导入数据响应"
+    }
+  }
+}

@@ -6,7 +6,15 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // 忽略：构建产物、依赖、Python 后端、Electron 产物
+  globalIgnores([
+    'dist',
+    'node_modules',
+    'apps/desktop/dist',
+    'apps/desktop/out',
+    'server/**',        // Python 后端，不参与 TS lint
+    'tools/codegen/dist',
+  ]),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

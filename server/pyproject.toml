@@ -1,0 +1,68 @@
+[project]
+name = "nexus-server"
+version = "0.1.0"
+description = "NexusResearch 后端 — FastAPI sidecar（AI 科研助手）"
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "MIT" }
+
+dependencies = [
+    # Web 框架
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    # 数据层
+    "sqlalchemy[asyncio]>=2.0.36",
+    "aiosqlite>=0.20.0",
+    "alembic>=1.14.0",
+    # 数据校验 / 配置
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    # AI 编排（Phase 2+）
+    "langchain>=0.3.7",
+    "langchain-core>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "langchain-anthropic>=0.2.0",
+    # Skills 引擎
+    "pyyaml>=6.0",
+    "jinja2>=3.1",
+    # 加密（API Key）
+    "cryptography>=43.0",
+    # HTTP 客户端（Provider 测试 / 代理）
+    "httpx>=0.28.0",
+    # 日志
+    "structlog>=24.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.28.0",  # TestClient
+    "ruff>=0.8.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+# ---------- Ruff ----------
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM"]
+ignore = ["E501"]  # 行长由 formatter 处理
+
+[tool.ruff.format]
+quote-style = "double"
+
+# ---------- Pytest ----------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
