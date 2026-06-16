@@ -61,7 +61,7 @@ class DeleteLiteratureRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    id: float
+    id: int
 
 
 class BulkLiteratureAction(BaseModel):
@@ -87,7 +87,7 @@ class GenerateSummaryResponse(BaseModel):
     )
     summary: str
     modelUsed: str
-    tokensUsed: float
+    tokensUsed: int
 
 
 class AiContext1(BaseModel):
@@ -121,7 +121,7 @@ class AiContext4(BaseModel):
     )
     type: Literal["reader"]
     literatureId: float
-    currentPage: float
+    currentPage: int
 
 
 class AiContext(RootModel[AiContext1 | AiContext2 | AiContext3 | AiContext4]):
@@ -311,11 +311,11 @@ class Literature(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    id: float
+    id: int
     title: str
     authors: str
     journal: str
-    year: float
+    year: int
     doi: str
     abstract: str
     aiSummary: str
@@ -331,11 +331,11 @@ class LiteratureListItem(BaseModel):
         extra="forbid",
     )
     abstractPreview: str
-    id: float
+    id: int
     title: str
     authors: str
     journal: str
-    year: float
+    year: int
     tags: list[str]
     readStatus: ReadStatus
     isFavorite: bool
@@ -358,7 +358,7 @@ class Annotation(BaseModel):
     id: str
     type: AnnotationType
     color: HighlightColor
-    page: float
+    page: int
     quotedText: str
     note: str
     createdAt: ISODateString
@@ -394,7 +394,7 @@ class Essay(BaseModel):
     title: str
     content: str
     tag: EssayTag
-    wordCount: float
+    wordCount: int
     createdAt: ISODateString
     updatedAt: ISODateString
 
@@ -448,7 +448,7 @@ class SkillStats(BaseModel):
         extra="forbid",
     )
     skillId: str
-    usageCount: float
+    usageCount: int
     lastUsedAt: ISODateString | None
     status: Literal["running", "paused"]
 
@@ -484,7 +484,7 @@ class ProxyConfig(BaseModel):
     enabled: bool
     type: ProxyType
     host: str
-    port: float
+    port: int
     auth: str
 
 
@@ -496,17 +496,17 @@ class StorageInfo(BaseModel):
     available: str
     breakdown: StorageBreakdown
     dataPath: str
-    literatureCount: float
-    essayCount: float
-    paperCount: float
+    literatureCount: int
+    essayCount: int
+    paperCount: int
 
 
 class LiteratureListRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    page: float
-    pageSize: float
+    page: int
+    pageSize: int
     sort: SortConfig3Cunknown3E | None = None
     search: str | None = None
     collectionId: str | None = None
@@ -527,7 +527,7 @@ class CreateLiteratureRequest(BaseModel):
     title: str
     authors: str
     journal: str
-    year: float
+    year: int
     doi: str
     abstract: str
     tags: list[str]
@@ -541,11 +541,11 @@ class UpdateLiteratureRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    id: float
+    id: int
     title: str | None = None
     authors: str | None = None
     journal: str | None = None
-    year: float | None = None
+    year: int | None = None
     tags: list[str] | None = None
     isFavorite: bool | None = None
     readStatus: ReadStatus | None = None
@@ -563,8 +563,8 @@ class EssayListRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    page: float
-    pageSize: float
+    page: int
+    pageSize: int
     sort: SortConfig3Cunknown3E | None = None
     search: str | None = None
     tag: EssayTag | None = None
@@ -603,7 +603,7 @@ class AiChatResponse(BaseModel):
     )
     message: ChatMessage
     modelUsed: str
-    tokensUsed: float
+    tokensUsed: int
 
 
 class AiEditSuggestionResponse(BaseModel):
@@ -654,8 +654,8 @@ class SkillListRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    page: float
-    pageSize: float
+    page: int
+    pageSize: int
     sort: SortConfig3Cunknown3E | None = None
     search: str | None = None
     category: SkillCategory | None = None
@@ -672,11 +672,11 @@ class CompileResult(BaseModel):
         extra="forbid",
     )
     status: CompileStatus
-    pages: float
+    pages: int
     fileSize: str
     logEntries: list[CompileLogEntry]
-    errorCount: float
-    warningCount: float
+    errorCount: int
+    warningCount: int
 
 
 class InstalledSkill(BaseModel):

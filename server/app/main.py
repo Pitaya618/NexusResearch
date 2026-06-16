@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import literature, system
+from app.api import ai, essay, literature, system
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import get_logger, setup_logging
@@ -58,6 +58,8 @@ register_exception_handlers(app)
 api_prefix = "/api"
 app.include_router(system.router, prefix=api_prefix)
 app.include_router(literature.router, prefix=api_prefix)
+app.include_router(essay.router, prefix=api_prefix)
+app.include_router(ai.router, prefix=api_prefix)
 
 
 @app.get("/")

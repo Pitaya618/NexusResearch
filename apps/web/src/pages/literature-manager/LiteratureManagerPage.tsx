@@ -1,9 +1,10 @@
-/** 文献管理页面 — 1:1 还原原始 HTML */
-import { useState, useMemo, useCallback } from 'react';
+/** 文献管理页面 — 从后端加载真实数据（替换 mock） */
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SAMPLE_LITERATURE, SAMPLE_COLLECTIONS, SAMPLE_TAGS, SAMPLE_STATS } from 'entities/literature/model/literature';
+import { SAMPLE_COLLECTIONS, SAMPLE_TAGS } from 'entities/literature/model/literature';
 import { ResizableLayout } from 'widgets/resizable-layout/ResizableLayout';
 import { useTabStore } from 'entities/tab/model/tabs';
+import { useLiteratureStore } from 'features/literature/model/literatureStore';
 import type { Literature, DetailTab, CitationFormat, ViewMode } from 'shared/types';
 
 export function LiteratureManagerPage() {
@@ -11,28 +12,44 @@ export function LiteratureManagerPage() {
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('card');
-  const [searchQuery, setSearchQuery] = useState('Transformer');
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeCollection, setActiveCollection] = useState('all');
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>('abstract');
 
-  const selectedLit = useMemo(() => SAMPLE_LITERATURE.find((l) => l.id === selectedId) ?? null, [selectedId]);
+  const { items, stats, loading, fetchList, fetchDetail, fetchStats, remove } = useLiteratureStore();
 
-  const filteredLit = useMemo(() => {
-    let result = [...SAMPLE_LITERATURE];
-    if (activeCollection === 'important') result = result.filter((l) => l.isFavorite);
-    else if (activeCollection === 'read') result = result.filter((l) => l.readStatus === 'read');
-    else if (activeCollection === 'unread') result = result.filter((l) => l.readStatus === 'unread');
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter((l) => l.title.toLowerCase().includes(q) || l.tags.some((t) => t.toLowerCase().includes(q)));
+  // 初次加载 + 过滤条件变化时重新拉取
+  useEffect(() => {
+    const params: { collectionId?: string; search?: string } = {};
+    if (activeCollection !== 'all') params.collectionId = activeCollection;
+    if (searchQuery.trim()) params.search = searchQuery.trim();
+    fetchList(params);
+  }, [fetchList, activeCollection, searchQuery]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  // 选中文献时加载完整详情
+  const selectedLit = useMemo(() => {
+    if (selectedId === null) return null;
+    const item = items.find((l) => l.id === selectedId);
+    return item ?? null;
+  }, [items, selectedId]);
+
+  // 选中后异步加载完整详情（含 abstract/aiSummary）
+  const [fullDetail, setFullDetail] = useState<Literature | null>(null);
+  useEffect(() => {
+    setFullDetail(null);
+    if (selectedId !== null) {
+      fetchDetail(selectedId).then((d) => setFullDetail(d));
     }
-    return result;
-  }, [activeCollection, searchQuery]);
+  }, [selectedId, fetchDetail]);
 
   const handleCopy = useCallback((text: string) => { navigator.clipboard.writeText(text).catch(() => {}); }, []);
 
   /** 打开文献阅读标签页 */
-  const handleOpenReader = useCallback((lit: Literature) => {
+  const handleOpenReader = useCallback((lit: { id: number; title: string }) => {
     openTab({
       id: `reader-${lit.id}`,
       route: 'literature-reader',
@@ -45,6 +62,11 @@ export function LiteratureManagerPage() {
     navigate(`/app/literature/${lit.id}`);
   }, [openTab, navigate]);
 
+  const handleDelete = useCallback(async (id: number) => {
+    await remove(id);
+    setSelectedId(null);
+  }, [remove]);
+
   const leftPanel = (
     <div className="left-panel">
       <div className="panel-section">
@@ -56,7 +78,7 @@ export function LiteratureManagerPage() {
             onClick={() => setActiveCollection(c.id)}
           >
             <span>{c.icon} {c.name}</span>
-            <span className="count">{c.count}</span>
+            <span className="count">{c.id === 'all' ? stats.total : ''}</span>
           </div>
         ))}
       </div>
@@ -73,9 +95,9 @@ export function LiteratureManagerPage() {
       <div className="panel-section">
         <h4>概览</h4>
         <div className="overview-stats">
-          <div className="stat-row"><span>总计</span><span className="val">{SAMPLE_STATS.total}</span></div>
-          <div className="stat-row"><span>本月新增</span><span className="val">{SAMPLE_STATS.addedThisMonth}</span></div>
-          <div className="stat-row"><span>有 AI 摘要</span><span className="val">{SAMPLE_STATS.withAiSummary}</span></div>
+          <div className="stat-row"><span>总计</span><span className="val">{stats.total}</span></div>
+          <div className="stat-row"><span>本月新增</span><span className="val">{stats.addedThisMonth}</span></div>
+          <div className="stat-row"><span>有 AI 摘要</span><span className="val">{stats.withAiSummary}</span></div>
         </div>
       </div>
     </div>
@@ -102,9 +124,17 @@ export function LiteratureManagerPage() {
         </select>
       </div>
 
-      {viewMode === 'card' ? (
+      {loading && <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-tertiary)' }}>加载中…</div>}
+
+      {!loading && items.length === 0 && (
+        <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-tertiary)' }}>
+          暂无文献{searchQuery ? `匹配「${searchQuery}」` : ''}
+        </div>
+      )}
+
+      {!loading && viewMode === 'card' && (
         <div className="lit-list">
-          {filteredLit.map((lit) => (
+          {items.map((lit) => (
             <div
               key={lit.id}
               className={`lit-card${lit.id === selectedId ? ' selected' : ''}`}
@@ -115,7 +145,7 @@ export function LiteratureManagerPage() {
               <div className="lit-info">
                 <h3>{lit.title}</h3>
                 <div className="lit-meta">{lit.authors.split(',')[0]} · {lit.journal} · {lit.year}</div>
-                <div className="lit-abstract">{lit.abstract}</div>
+                <div className="lit-abstract">{lit.abstractPreview}</div>
                 <div className="lit-tags">
                   {lit.tags.map((t) => <span key={t} className="lit-tag">{t}</span>)}
                 </div>
@@ -123,7 +153,9 @@ export function LiteratureManagerPage() {
             </div>
           ))}
         </div>
-      ) : (
+      )}
+
+      {!loading && viewMode === 'list' && (
         <div className="lit-table">
           <div className="lit-table-header">
             <span className="col-title sort-arrow">标题 ▾</span>
@@ -133,7 +165,7 @@ export function LiteratureManagerPage() {
             <span className="col-tags">标签</span>
             <span className="col-status">状态</span>
           </div>
-          {filteredLit.map((lit) => (
+          {items.map((lit) => (
             <div
               key={lit.id}
               className={`lit-table-row${lit.id === selectedId ? ' selected' : ''}`}
@@ -157,12 +189,13 @@ export function LiteratureManagerPage() {
     </div>
   );
 
-  const rightPanel = selectedLit ? (
+  const detailLit = fullDetail ?? selectedLit;
+  const rightPanel = detailLit ? (
     <div className="right-panel">
       <div className="detail-header">
-        <h2>{selectedLit.title}</h2>
-        <div className="authors">{selectedLit.authors}</div>
-        <div className="venue">{selectedLit.journal} · {selectedLit.year}</div>
+        <h2>{detailLit.title}</h2>
+        <div className="authors">{detailLit.authors}</div>
+        <div className="venue">{detailLit.journal} · {detailLit.year}</div>
       </div>
       <div className="detail-tabs">
         {(['abstract', 'aiSummary', 'notes', 'citations'] as DetailTab[]).map((tab) => (
@@ -176,16 +209,20 @@ export function LiteratureManagerPage() {
         ))}
       </div>
       <div className="detail-body">
-        {activeDetailTab === 'abstract' && <p>{selectedLit.abstract}</p>}
-        {activeDetailTab === 'aiSummary' && <p>{selectedLit.aiSummary}</p>}
+        {activeDetailTab === 'abstract' && (
+          <p>{'abstract' in detailLit ? detailLit.abstract : detailLit.abstractPreview}</p>
+        )}
+        {activeDetailTab === 'aiSummary' && (
+          <p>{'aiSummary' in detailLit ? detailLit.aiSummary : '（加载中…）'}</p>
+        )}
         {activeDetailTab === 'notes' && <p>暂无笔记</p>}
         {activeDetailTab === 'citations' && (
           <>
             {(['apa', 'mla', 'gbt7714'] as CitationFormat[]).map((fmt) => (
               <div key={fmt} className="cite-block">
                 <div className="cite-format">{fmt.toUpperCase()}</div>
-                <button className="copy-btn" onClick={() => handleCopy(`${selectedLit.authors}. ${selectedLit.title}. ${selectedLit.journal}, ${selectedLit.year}.`)}>复制</button>
-                {selectedLit.authors}. {selectedLit.title}. <em>{selectedLit.journal}</em>, {selectedLit.year}.
+                <button className="copy-btn" onClick={() => handleCopy(`${detailLit.authors}. ${detailLit.title}. ${detailLit.journal}, ${detailLit.year}.`)}>复制</button>
+                {detailLit.authors}. {detailLit.title}. <em>{detailLit.journal}</em>, {detailLit.year}.
               </div>
             ))}
           </>
@@ -193,7 +230,7 @@ export function LiteratureManagerPage() {
       </div>
       <div className="detail-actions">
         <button className="btn btn-ghost">📋 复制引用</button>
-        <button className="btn btn-danger">🗑 删除</button>
+        <button className="btn btn-danger" onClick={() => handleDelete(detailLit.id)}>🗑 删除</button>
       </div>
     </div>
   ) : (

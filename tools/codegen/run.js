@@ -191,6 +191,9 @@ function generatePydantic() {
       "--use-union-operator",
       "--disable-timestamp",
       "--field-constraints",
+      // TS number 类型默认映射为 float；强制整数场景用 int
+      "--strict-types",
+      "int",
       // 使用内置格式化器，避免外部 black/isort 依赖告警
       "--formatters",
       "builtin",
@@ -211,7 +214,61 @@ function generatePydantic() {
     "utf-8",
   );
 
+  // 后处理：将已知整数字段从 float 改为 int
+  fixIntegerFields(join(PY_OUT_DIR, "models.py"));
+
   console.log(`[codegen] ✓ Pydantic models written → ${join(PY_OUT_DIR, "models.py")}`);
+}
+
+// ---------- 后处理：整数类型修正 ----------
+// TS `number` 经 JSON Schema 映射为 float，但部分字段语义上是整数。
+// 这里按字段名匹配，改写注解为 int。
+const INTEGER_FIELDS = new Set([
+  "id",
+  "year",
+  "wordCount",
+  "tokensUsed",
+  "page",
+  "pageSize",
+  "total",
+  "totalPages",
+  "errorCount",
+  "warningCount",
+  "pages",
+  "currentPage",
+  "totalPages",
+  "number",
+  "port",
+  "usageCount",
+  "literatureCount",
+  "essayCount",
+  "paperCount",
+]);
+
+function fixIntegerFields(filePath) {
+  let content = readFileSync(filePath, "utf-8");
+  // 统一换行为 LF，避免 CRLF 干扰正则匹配
+  content = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = content.split("\n");
+  let changed = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // 匹配 Pydantic 字段行: `    fieldName: float = ...` 或 `    fieldName: float | None`
+    const m = line.match(/^(\s+)(\w+):\s*float\b(.*)$/);
+    if (m) {
+      const [, indent, fieldName, rest] = m;
+      if (INTEGER_FIELDS.has(fieldName)) {
+        lines[i] = `${indent}${fieldName}: int${rest.replace(/\bfloat\b/g, "int")}`;
+        changed++;
+      }
+    }
+  }
+
+  if (changed > 0) {
+    writeFileSync(filePath, lines.join("\n"), "utf-8");
+    console.log(`[codegen] ✓ 修正 ${changed} 个整数字段类型 float → int`);
+  }
 }
 
 // ---------- Entry ----------

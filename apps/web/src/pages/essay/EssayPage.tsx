@@ -1,58 +1,80 @@
-/** 随笔页面 — 1:1 还原原始 HTML */
-import { useState, useCallback, useRef } from 'react';
-import { SAMPLE_ESSAYS } from 'entities/essay/model/essays';
+/** 随笔页面 — 从后端加载真实数据 + AI 对话（SSE 流式） */
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ResizableLayout } from 'widgets/resizable-layout/ResizableLayout';
-import type { Essay, ChatMessage, AiEditSuggestion } from 'shared/types';
-
-const MOCK_SUGGESTION: AiEditSuggestion = {
-  id: 's1',
-  segments: [
-    { type: 'unchanged', text: '大型语言模型（LLM）正在' },
-    { type: 'deletion', text: '改变' },
-    { type: 'addition', text: '深刻变革' },
-    { type: 'unchanged', text: '药物发现的范式。' },
-  ],
-  accepted: null,
-};
+import { useEssayStore } from 'features/essay/model/essayStore';
+import { aiApi } from 'shared/lib/api';
+import type { ChatMessage } from 'shared/types';
 
 export function EssayPage() {
-  const [activeId, setActiveId] = useState('essay-1');
-  const [essays] = useState<readonly Essay[]>(SAMPLE_ESSAYS);
+  const { essays, loading, fetchList, update } = useEssayStore();
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(true);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { id: '1', role: 'assistant', content: '👋 我已读取你的随笔内容。关于 LLM 在药物发现中的应用，我看到你已经梳理了 Transformer 分子生成和强化学习优化两个方向。需要我帮你深入分析哪个部分？', timestamp: '2026-06-06T10:00:00Z' },
+    { id: '1', role: 'assistant', content: '👋 我是你的 AI 科研助手。选中左侧随笔后，我可以帮你润色、分析或扩展内容。', timestamp: new Date().toISOString() },
   ]);
   const [chatInput, setChatInput] = useState('');
-  const [suggestion, setSuggestion] = useState<AiEditSuggestion | null>(MOCK_SUGGESTION);
+  const [streaming, setStreaming] = useState(false);
   const chatTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    fetchList();
+  }, [fetchList]);
+
+  useEffect(() => {
+    if (!activeId && essays.length > 0) setActiveId(essays[0].id);
+  }, [essays, activeId]);
 
   const activeEssay = essays.find((e) => e.id === activeId);
 
-  const handleSend = useCallback(() => {
-    if (!chatInput.trim()) return;
-    setChatMessages((prev) => [...prev, { id: Date.now().toString(), role: 'user', content: chatInput, timestamp: new Date().toISOString() }]);
-    setChatInput('');
-    if (chatTextareaRef.current) chatTextareaRef.current.style.height = 'auto';
-    setTimeout(() => {
-      setChatMessages((prev) => [...prev, {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: '好的。基于你的草稿，我重新组织了"初步想法"部分的结构。建议将标题改为"基于 Transformer 的分子生成"，并在挑战部分增加"训练数据偏差"。',
-        timestamp: new Date().toISOString(),
-      }]);
-      setSuggestion(MOCK_SUGGESTION);
-    }, 1000);
-  }, [chatInput]);
-
-  const handleDiffAction = useCallback((action: 'accept' | 'reject') => {
-    setSuggestion(null);
-    setChatMessages((prev) => [...prev, {
+  const handleSend = useCallback(async () => {
+    if (!chatInput.trim() || streaming || !activeEssay) return;
+    const userMsg: ChatMessage = {
       id: Date.now().toString(),
-      role: 'assistant',
-      content: action === 'accept' ? '✓ 已应用修改！' : '✕ 已忽略建议。',
+      role: 'user',
+      content: chatInput,
       timestamp: new Date().toISOString(),
-    }]);
+    };
+    const assistantId = (Date.now() + 1).toString();
+    setChatMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '', timestamp: new Date().toISOString() }]);
+    setChatInput('');
+    setStreaming(true);
+    if (chatTextareaRef.current) chatTextareaRef.current.style.height = 'auto';
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      await aiApi.chat(
+        {
+          messages: [...chatMessages, userMsg].map((m) => ({ id: m.id, role: m.role, content: m.content, timestamp: m.timestamp })),
+          context: { type: 'essay', essayId: activeEssay.id },
+        },
+        (chunk) => {
+          setChatMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + chunk } : m)),
+          );
+        },
+        () => setStreaming(false),
+        controller.signal,
+      );
+    } catch {
+      setChatMessages((prev) =>
+        prev.map((m) => (m.id === assistantId && m.content === '' ? { ...m, content: '（AI 调用失败，请检查 Provider 配置）' } : m)),
+      );
+    } finally {
+      setStreaming(false);
+    }
+  }, [chatInput, streaming, activeEssay, chatMessages]);
+
+  const handleStop = useCallback(() => {
+    abortRef.current?.abort();
+    setStreaming(false);
   }, []);
+
+  const handleTitleChange = useCallback((id: string, title: string) => {
+    update(id, { title });
+  }, [update]);
 
   const leftPanel = (
     <div className="col-list">
@@ -61,6 +83,8 @@ export function EssayPage() {
         <button title="新建随笔">+</button>
       </div>
       <div className="essay-list-body">
+        {loading && <div style={{ padding: 16, color: 'var(--text-tertiary)' }}>加载中…</div>}
+        {!loading && essays.length === 0 && <div style={{ padding: 16, color: 'var(--text-tertiary)' }}>暂无随笔</div>}
         {essays.map((essay) => (
           <div
             key={essay.id}
@@ -78,14 +102,25 @@ export function EssayPage() {
   const centerPanel = activeEssay ? (
     <div className="col-editor">
       <div className="col-header" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <input className="title" defaultValue={activeEssay.title} style={{ flex: 1, minWidth: 0 }} />
+        <input
+          className="title"
+          defaultValue={activeEssay.title}
+          key={activeEssay.id}
+          onBlur={(e) => handleTitleChange(activeEssay.id, e.target.value)}
+          style={{ flex: 1, minWidth: 0 }}
+        />
         <button className="pill-btn">🏷 {activeEssay.tag}</button>
         <select className="pill-select"><option>导入到论文写作</option><option>导入到实验模块</option></select>
         <button className={`pill-btn${chatOpen ? ' primary' : ''}`} onClick={() => setChatOpen(!chatOpen)}>💬 AI</button>
         <button className="pill-btn">⚙</button>
       </div>
       <div className="col-body">
-        <textarea className="md-editor" defaultValue={activeEssay.content} />
+        <textarea
+          className="md-editor"
+          key={activeEssay.id}
+          defaultValue={activeEssay.content}
+          onBlur={(e) => update(activeEssay.id, { content: e.target.value })}
+        />
       </div>
     </div>
   ) : null;
@@ -93,30 +128,15 @@ export function EssayPage() {
   const rightPanel = (
     <div className={`col-chat${chatOpen ? '' : ' collapsed'}`}>
       <div className="col-header">
-        AI 对话 <span style={{ fontWeight: 400, fontSize: 11 }}>Claude 4 Opus</span>
+        AI 对话 <span style={{ fontWeight: 400, fontSize: 11 }}>流式</span>
         <button className="toggle-btn" onClick={() => setChatOpen(false)} title="收起面板">✕</button>
       </div>
       <div className="chat-messages">
         {chatMessages.map((msg) => (
           <div key={msg.id} className={`chat-msg ${msg.role}`}>
-            {msg.content}
+            {msg.content || (streaming && msg.role === 'assistant' ? '思考中…' : '')}
           </div>
         ))}
-        {suggestion && (
-          <div className="chat-msg assistant">
-            <strong>建议修改：</strong><br /><br />
-            {suggestion.segments.map((seg, i) => (
-              <span key={i} className={seg.type === 'addition' ? 'diff-add' : seg.type === 'deletion' ? 'diff-del' : ''}>
-                {seg.text}
-              </span>
-            ))}
-            <div className="actions">
-              <button className="accept" onClick={() => handleDiffAction('accept')}>✓ 接受</button>
-              <button onClick={() => handleDiffAction('reject')}>✕ 拒绝</button>
-              <button>✎ 微调</button>
-            </div>
-          </div>
-        )}
       </div>
       <div className="chat-input-row">
         <textarea
@@ -125,10 +145,15 @@ export function EssayPage() {
           onChange={(e) => setChatInput(e.target.value)}
           onInput={(e) => { const el = e.currentTarget; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-          placeholder="输入问题，AI 可读取左侧随笔全文…"
+          placeholder={activeEssay ? '输入问题，AI 可读取左侧随笔全文…' : '请先选择一篇随笔'}
           rows={1}
+          disabled={!activeEssay}
         />
-        <button onClick={handleSend}>发送</button>
+        {streaming ? (
+          <button onClick={handleStop}>停止</button>
+        ) : (
+          <button onClick={handleSend} disabled={!activeEssay}>发送</button>
+        )}
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -33,10 +34,13 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
-async def _set_sqlite_pragmas() -> None:
-    """启用 SQLite WAL 模式与外键约束（提升并发与数据完整性）。"""
+def _set_sqlite_pragmas() -> None:
+    """启用 SQLite WAL 模式与外键约束（提升并发与数据完整性）。
 
-    @engine.sync_engine.event.listens_for(engine.sync_engine, "connect")  # type: ignore[attr-defined]
+    仅注册事件监听器（同步操作），在每次连接建立时执行 PRAGMA。
+    """
+
+    @event.listens_for(engine.sync_engine, "connect")
     def _set_pragma(dbapi_conn, _):  # noqa: ANN001
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
