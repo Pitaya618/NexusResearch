@@ -79,7 +79,8 @@ build/
 develop-eggs/
 downloads/
 eggs/
-lib/
+# lib/ 与前端 shared/lib/ 冲突，改用 server/lib 仅匹配 Python 打包产物
+server/lib/
 lib64/
 parts/
 sdist/

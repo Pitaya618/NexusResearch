@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import ai, essay, literature, provider, skill, system
+from app.api import ai, essay, literature, mcp, paper, provider, skill, system
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import get_logger, setup_logging
@@ -29,6 +29,10 @@ async def lifespan(_: FastAPI):
     from app.services.skills.registry import registry
 
     registry.load_all()
+    # 加载 MCP 服务器配置
+    from app.services.mcp.manager import mcp_manager
+
+    mcp_manager.load()
     logger.info("app_ready", host=settings.host, port=settings.port)
     yield
     from app.db.session import engine
@@ -66,6 +70,8 @@ app.include_router(essay.router, prefix=api_prefix)
 app.include_router(ai.router, prefix=api_prefix)
 app.include_router(provider.router, prefix=api_prefix)
 app.include_router(skill.router, prefix=api_prefix)
+app.include_router(paper.router, prefix=api_prefix)
+app.include_router(mcp.router, prefix=api_prefix)
 
 
 @app.get("/")
